@@ -1,14 +1,15 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { Plus, Trash2, FileDown, UtensilsCrossed } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import AddProductDialog from '@/components/AddProductDialog';
 import RemoveProductDialog from '@/components/RemoveProductDialog';
+import jsPDF from 'jspdf';
 
 interface Product {
   id: string;
@@ -117,46 +118,75 @@ const Index = () => {
     const subtotal = selectedItems.reduce((sum, product) => sum + product.prezzo, 0);
     const total = subtotal * numberOfPeople;
 
-    const quoteContent = `
-PREVENTIVO CATERING
-==================
-
-Azienda: Delizie & Sapori Catering
-Indirizzo: Via Roma 123, Milano
-Telefono: 02-1234567
-Email: info@deliziesapori.it
-
-Data: ${currentDate}
-Numero persone: ${numberOfPeople}
-
-PRODOTTI SELEZIONATI:
-${selectedItems.map(item => 
-  `- ${item.nome}: €${item.prezzo.toFixed(2)} per persona`
-).join('\n')}
-
-RIEPILOGO:
-Subtotale per persona: €${subtotal.toFixed(2)}
-Numero persone: ${numberOfPeople}
-TOTALE COMPLESSIVO: €${total.toFixed(2)}
-
-Grazie per averci scelto!
-Il preventivo è valido per 30 giorni.
-    `.trim();
-
-    // Scarica il file
-    const blob = new Blob([quoteContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `preventivo-catering-${currentDate.replace(/\//g, '-')}.txt`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // Crea PDF
+    const doc = new jsPDF();
+    
+    // Intestazione
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PREVENTIVO CATERING', 20, 30);
+    
+    // Linea separatrice
+    doc.setLineWidth(0.5);
+    doc.line(20, 35, 190, 35);
+    
+    // Informazioni azienda
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Delizie & Sapori Catering', 20, 50);
+    doc.text('Via Roma 123, Milano', 20, 58);
+    doc.text('Tel: 02-1234567', 20, 66);
+    doc.text('Email: info@deliziesapori.it', 20, 74);
+    
+    // Data e numero persone
+    doc.text(`Data: ${currentDate}`, 130, 50);
+    doc.text(`Numero persone: ${numberOfPeople}`, 130, 58);
+    
+    // Prodotti selezionati
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PRODOTTI SELEZIONATI:', 20, 95);
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    let yPosition = 110;
+    
+    selectedItems.forEach((item, index) => {
+      doc.text(`${index + 1}. ${item.nome}`, 25, yPosition);
+      doc.text(`€${item.prezzo.toFixed(2)} per persona`, 130, yPosition);
+      yPosition += 8;
+    });
+    
+    // Riepilogo
+    yPosition += 10;
+    doc.setLineWidth(0.3);
+    doc.line(20, yPosition, 190, yPosition);
+    yPosition += 15;
+    
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Subtotale per persona: €${subtotal.toFixed(2)}`, 20, yPosition);
+    yPosition += 8;
+    doc.text(`Numero persone: ${numberOfPeople}`, 20, yPosition);
+    yPosition += 15;
+    
+    doc.setFontSize(16);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`TOTALE COMPLESSIVO: €${total.toFixed(2)}`, 20, yPosition);
+    
+    // Footer
+    yPosition += 25;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'italic');
+    doc.text('Grazie per averci scelto!', 20, yPosition);
+    doc.text('Il preventivo è valido per 30 giorni.', 20, yPosition + 8);
+    
+    // Salva il PDF
+    doc.save(`preventivo-catering-${currentDate.replace(/\//g, '-')}.pdf`);
 
     toast({
-      title: "Preventivo generato",
-      description: "Il file è stato scaricato con successo",
+      title: "Preventivo PDF generato",
+      description: "Il file PDF è stato scaricato con successo",
     });
   };
 
@@ -183,41 +213,82 @@ Il preventivo è valido per 30 giorni.
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
-                <div className="grid gap-4">
-                  {selectedProducts.map((product) => (
-                    <div
-                      key={product.id}
-                      className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all duration-200 ${
-                        product.selected
-                          ? 'border-orange-500 bg-orange-50'
-                          : 'border-gray-200 bg-white hover:border-orange-300'
-                      }`}
-                    >
-                      <div className="flex items-center space-x-3">
-                        <Checkbox
-                          id={product.id}
-                          checked={product.selected}
-                          onCheckedChange={() => toggleProductSelection(product.id)}
-                          className="h-5 w-5"
-                        />
-                        <div>
-                          <label
-                            htmlFor={product.id}
-                            className="text-lg font-medium text-gray-800 cursor-pointer"
-                          >
-                            {product.nome}
-                          </label>
+                {/* Area di scorrimento condizionale */}
+                {selectedProducts.length > 7 ? (
+                  <ScrollArea className="h-[400px] pr-4">
+                    <div className="grid gap-4">
+                      {selectedProducts.map((product) => (
+                        <div
+                          key={product.id}
+                          className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all duration-200 ${
+                            product.selected
+                              ? 'border-orange-500 bg-orange-50'
+                              : 'border-gray-200 bg-white hover:border-orange-300'
+                          }`}
+                        >
+                          <div className="flex items-center space-x-3">
+                            <Checkbox
+                              id={product.id}
+                              checked={product.selected}
+                              onCheckedChange={() => toggleProductSelection(product.id)}
+                              className="h-5 w-5"
+                            />
+                            <div>
+                              <label
+                                htmlFor={product.id}
+                                className="text-lg font-medium text-gray-800 cursor-pointer"
+                              >
+                                {product.nome}
+                              </label>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-xl font-bold text-orange-600">
+                              €{product.prezzo.toFixed(2)}
+                            </span>
+                            <div className="text-sm text-gray-500">per persona</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                ) : (
+                  <div className="grid gap-4">
+                    {selectedProducts.map((product) => (
+                      <div
+                        key={product.id}
+                        className={`flex items-center justify-between p-4 rounded-lg border-2 transition-all duration-200 ${
+                          product.selected
+                            ? 'border-orange-500 bg-orange-50'
+                            : 'border-gray-200 bg-white hover:border-orange-300'
+                        }`}
+                      >
+                        <div className="flex items-center space-x-3">
+                          <Checkbox
+                            id={product.id}
+                            checked={product.selected}
+                            onCheckedChange={() => toggleProductSelection(product.id)}
+                            className="h-5 w-5"
+                          />
+                          <div>
+                            <label
+                              htmlFor={product.id}
+                              className="text-lg font-medium text-gray-800 cursor-pointer"
+                            >
+                              {product.nome}
+                            </label>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-xl font-bold text-orange-600">
+                            €{product.prezzo.toFixed(2)}
+                          </span>
+                          <div className="text-sm text-gray-500">per persona</div>
                         </div>
                       </div>
-                      <div className="text-right">
-                        <span className="text-xl font-bold text-orange-600">
-                          €{product.prezzo.toFixed(2)}
-                        </span>
-                        <div className="text-sm text-gray-500">per persona</div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                    ))}
+                  </div>
+                )}
 
                 {/* Pulsanti Gestione Prodotti */}
                 <div className="flex gap-3 mt-6 pt-6 border-t">
@@ -311,7 +382,7 @@ Il preventivo è valido per 30 giorni.
                   disabled={!selectedProducts.some(p => p.selected)}
                 >
                   <FileDown className="h-5 w-5 mr-2" />
-                  Genera Preventivo
+                  Genera Preventivo PDF
                 </Button>
               </CardContent>
             </Card>
