@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -133,78 +132,101 @@ const Index = () => {
     const subtotal = selectedItems.reduce((sum, product) => sum + product.prezzo, 0);
     const total = subtotal * numberOfPeople;
 
-    // Crea PDF con dati della cooperativa "i Piosi"
+    // Crea PDF con dati corretti della cooperativa "i Piosi"
     const doc = new jsPDF();
     
-    // Intestazione
-    doc.setFontSize(20);
-    doc.setFont('helvetica', 'bold');
-    doc.text('PREVENTIVO CATERING', 20, 30);
-    
-    // Linea separatrice
-    doc.setLineWidth(0.5);
-    doc.line(20, 35, 190, 35);
-    
-    // Informazioni cooperativa "i Piosi"
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    doc.text('Cooperativa Sociale "i Piosi"', 20, 50);
-    doc.text('Via Roma 25, 37066 Sommacampagna (VR)', 20, 58);
-    doc.text('Tel: 045-8961234', 20, 66);
-    doc.text('Email: info@ipiosi.coop', 20, 74);
-    doc.text('P.IVA: 03456789023', 20, 82);
-    
-    // Data e numero persone
-    doc.text(`Data: ${currentDate}`, 130, 50);
-    doc.text(`Numero persone: ${numberOfPeople}`, 130, 58);
-    
-    // Prodotti selezionati
-    doc.setFontSize(14);
-    doc.setFont('helvetica', 'bold');
-    doc.text('PRODOTTI SELEZIONATI:', 20, 105);
-    
-    doc.setFontSize(11);
-    doc.setFont('helvetica', 'normal');
-    let yPosition = 120;
-    
-    selectedItems.forEach((item, index) => {
-      doc.text(`${index + 1}. ${item.nome}`, 25, yPosition);
-      doc.text(`€${item.prezzo.toFixed(2)} per persona`, 130, yPosition);
-      yPosition += 8;
-    });
-    
-    // Riepilogo
-    yPosition += 10;
-    doc.setLineWidth(0.3);
-    doc.line(20, yPosition, 190, yPosition);
-    yPosition += 15;
-    
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Subtotale per persona: €${subtotal.toFixed(2)}`, 20, yPosition);
-    yPosition += 8;
-    doc.text(`Numero persone: ${numberOfPeople}`, 20, yPosition);
-    yPosition += 15;
-    
-    doc.setFontSize(16);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`TOTALE COMPLESSIVO: €${total.toFixed(2)}`, 20, yPosition);
-    
-    // Footer
-    yPosition += 25;
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'italic');
-    doc.text('Grazie per averci scelto per il vostro evento!', 20, yPosition);
-    doc.text('Il preventivo è valido per 30 giorni dalla data di emissione.', 20, yPosition + 8);
-    doc.text('La cooperativa sociale "i Piosi" si impegna per la qualità e la solidarietà.', 20, yPosition + 16);
-    
-    // Salva il PDF
-    doc.save(`${filename}.pdf`);
+    // Aggiungi logo (se l'immagine è disponibile)
+    const logoImg = new Image();
+    logoImg.onload = function() {
+      // Logo in alto a sinistra
+      doc.addImage(logoImg, 'PNG', 20, 15, 40, 20);
+      
+      // Continua con il resto del PDF dopo che il logo è caricato
+      generatePdfContent();
+    };
+    logoImg.onerror = function() {
+      // Se il logo non si carica, continua senza
+      generatePdfContent();
+    };
+    logoImg.src = '/lovable-uploads/2293249a-bf68-4522-8f20-970b1d6bdf43.png';
 
-    toast({
-      title: "Preventivo PDF generato",
-      description: "Il file PDF è stato scaricato con successo",
-    });
+    const generatePdfContent = () => {
+      // Intestazione
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PREVENTIVO CATERING', 70, 30);
+      
+      // Linea separatrice
+      doc.setLineWidth(0.5);
+      doc.line(20, 40, 190, 40);
+      
+      // Informazioni cooperativa "i Piosi" - dati corretti
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Coop. Sociale I Piosi', 20, 55);
+      doc.text('Via 2 Giugno, 11 – 37066 Sommacampagna (Verona)', 20, 63);
+      doc.text('Tel: 045 515882 – Fax: 045 515480', 20, 71);
+      doc.text('E-mail: info@ipiosi.it', 20, 79);
+      
+      // Data e numero persone
+      doc.text(`Data: ${currentDate}`, 130, 55);
+      doc.text(`Numero persone: ${numberOfPeople}`, 130, 63);
+      
+      // Prodotti selezionati
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PRODOTTI SELEZIONATI:', 20, 100);
+      
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      let yPosition = 115;
+      
+      selectedItems.forEach((item, index) => {
+        doc.text(`${index + 1}. ${item.nome}`, 25, yPosition);
+        doc.text(`€${item.prezzo.toFixed(2)} per persona`, 130, yPosition);
+        yPosition += 8;
+      });
+      
+      // Riepilogo
+      yPosition += 10;
+      doc.setLineWidth(0.3);
+      doc.line(20, yPosition, 190, yPosition);
+      yPosition += 15;
+      
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Subtotale per persona: €${subtotal.toFixed(2)}`, 20, yPosition);
+      yPosition += 8;
+      doc.text(`Numero persone: ${numberOfPeople}`, 20, yPosition);
+      yPosition += 15;
+      
+      doc.setFontSize(16);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`TOTALE COMPLESSIVO: €${total.toFixed(2)}`, 20, yPosition);
+      
+      // Footer
+      yPosition += 25;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'italic');
+      doc.text('Grazie per averci scelto per il vostro evento!', 20, yPosition);
+      doc.text('Il preventivo è valido per 30 giorni dalla data di emissione.', 20, yPosition + 8);
+      doc.text('La cooperativa sociale "i Piosi" si impegna per la qualità e la solidarietà.', 20, yPosition + 16);
+      
+      // Salva il PDF
+      doc.save(`${filename}.pdf`);
+
+      toast({
+        title: "Preventivo PDF generato",
+        description: "Il file PDF è stato scaricato con successo",
+      });
+    };
+
+    // Se il logo non si carica entro 2 secondi, procedi comunque
+    setTimeout(() => {
+      if (!logoImg.complete) {
+        generatePdfContent();
+      }
+    }, 2000);
   };
 
   return (
