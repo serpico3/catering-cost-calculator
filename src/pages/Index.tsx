@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,10 +6,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Trash2, FileDown, UtensilsCrossed } from 'lucide-react';
+import { Plus, Trash2, FileDown, UtensilsCrossed, FileText } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import AddProductDialog from '@/components/AddProductDialog';
 import RemoveProductDialog from '@/components/RemoveProductDialog';
+import ExportDialog from '@/components/ExportDialog';
+import CsvImportExportDialog from '@/components/CsvImportExportDialog';
 import jsPDF from 'jspdf';
 
 interface Product {
@@ -27,6 +30,8 @@ const Index = () => {
   const [numberOfPeople, setNumberOfPeople] = useState<number>(1);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
+  const [isCsvDialogOpen, setIsCsvDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Carica i prodotti dal localStorage al mount
@@ -94,6 +99,16 @@ const Index = () => {
     });
   };
 
+  const importProducts = (importedProducts: Product[]) => {
+    setProducts(importedProducts);
+    setSelectedProducts(importedProducts.map(p => ({ ...p, selected: false })));
+    
+    toast({
+      title: "Prodotti importati",
+      description: `${importedProducts.length} prodotti caricati dal CSV`,
+    });
+  };
+
   const calculateTotal = () => {
     const selectedTotal = selectedProducts
       .filter(product => product.selected)
@@ -102,7 +117,7 @@ const Index = () => {
     return selectedTotal * numberOfPeople;
   };
 
-  const generateQuote = () => {
+  const generateQuote = (filename: string) => {
     const selectedItems = selectedProducts.filter(p => p.selected);
     
     if (selectedItems.length === 0) {
@@ -118,7 +133,7 @@ const Index = () => {
     const subtotal = selectedItems.reduce((sum, product) => sum + product.prezzo, 0);
     const total = subtotal * numberOfPeople;
 
-    // Crea PDF
+    // Crea PDF con dati della cooperativa "i Piosi"
     const doc = new jsPDF();
     
     // Intestazione
@@ -130,13 +145,14 @@ const Index = () => {
     doc.setLineWidth(0.5);
     doc.line(20, 35, 190, 35);
     
-    // Informazioni azienda
+    // Informazioni cooperativa "i Piosi"
     doc.setFontSize(12);
     doc.setFont('helvetica', 'normal');
-    doc.text('Delizie & Sapori Catering', 20, 50);
-    doc.text('Via Roma 123, Milano', 20, 58);
-    doc.text('Tel: 02-1234567', 20, 66);
-    doc.text('Email: info@deliziesapori.it', 20, 74);
+    doc.text('Cooperativa Sociale "i Piosi"', 20, 50);
+    doc.text('Via Roma 25, 37066 Sommacampagna (VR)', 20, 58);
+    doc.text('Tel: 045-8961234', 20, 66);
+    doc.text('Email: info@ipiosi.coop', 20, 74);
+    doc.text('P.IVA: 03456789023', 20, 82);
     
     // Data e numero persone
     doc.text(`Data: ${currentDate}`, 130, 50);
@@ -145,11 +161,11 @@ const Index = () => {
     // Prodotti selezionati
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text('PRODOTTI SELEZIONATI:', 20, 95);
+    doc.text('PRODOTTI SELEZIONATI:', 20, 105);
     
     doc.setFontSize(11);
     doc.setFont('helvetica', 'normal');
-    let yPosition = 110;
+    let yPosition = 120;
     
     selectedItems.forEach((item, index) => {
       doc.text(`${index + 1}. ${item.nome}`, 25, yPosition);
@@ -178,11 +194,12 @@ const Index = () => {
     yPosition += 25;
     doc.setFontSize(10);
     doc.setFont('helvetica', 'italic');
-    doc.text('Grazie per averci scelto!', 20, yPosition);
-    doc.text('Il preventivo è valido per 30 giorni.', 20, yPosition + 8);
+    doc.text('Grazie per averci scelto per il vostro evento!', 20, yPosition);
+    doc.text('Il preventivo è valido per 30 giorni dalla data di emissione.', 20, yPosition + 8);
+    doc.text('La cooperativa sociale "i Piosi" si impegna per la qualità e la solidarietà.', 20, yPosition + 16);
     
     // Salva il PDF
-    doc.save(`preventivo-catering-${currentDate.replace(/\//g, '-')}.pdf`);
+    doc.save(`${filename}.pdf`);
 
     toast({
       title: "Preventivo PDF generato",
@@ -199,7 +216,7 @@ const Index = () => {
             <UtensilsCrossed className="h-8 w-8 text-orange-600" />
             <h1 className="text-4xl font-bold text-gray-800">Catering Calculator</h1>
           </div>
-          <p className="text-lg text-gray-600">Crea i tuoi preventivi in modo semplice e professionale</p>
+          <p className="text-lg text-gray-600">Cooperativa Sociale "i Piosi" - Sommacampagna</p>
         </div>
 
         <div className="grid lg:grid-cols-3 gap-6">
@@ -291,21 +308,29 @@ const Index = () => {
                 )}
 
                 {/* Pulsanti Gestione Prodotti */}
-                <div className="flex gap-3 mt-6 pt-6 border-t">
+                <div className="grid grid-cols-2 gap-3 mt-6 pt-6 border-t">
                   <Button
                     onClick={() => setIsAddDialogOpen(true)}
-                    className="flex-1 bg-green-600 hover:bg-green-700"
+                    className="bg-green-600 hover:bg-green-700"
                   >
                     <Plus className="h-4 w-4 mr-2" />
-                    Aggiungi Prodotto
+                    Aggiungi
                   </Button>
                   <Button
                     onClick={() => setIsRemoveDialogOpen(true)}
                     variant="outline"
-                    className="flex-1 border-red-500 text-red-600 hover:bg-red-50"
+                    className="border-red-500 text-red-600 hover:bg-red-50"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
-                    Rimuovi Prodotto
+                    Rimuovi
+                  </Button>
+                  <Button
+                    onClick={() => setIsCsvDialogOpen(true)}
+                    variant="outline"
+                    className="col-span-2 border-blue-500 text-blue-600 hover:bg-blue-50"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    Gestione CSV
                   </Button>
                 </div>
               </CardContent>
@@ -377,7 +402,7 @@ const Index = () => {
                 </div>
 
                 <Button
-                  onClick={generateQuote}
+                  onClick={() => setIsExportDialogOpen(true)}
                   className="w-full mt-6 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-lg py-3"
                   disabled={!selectedProducts.some(p => p.selected)}
                 >
@@ -402,6 +427,19 @@ const Index = () => {
         onOpenChange={setIsRemoveDialogOpen}
         products={products}
         onRemoveProduct={removeProduct}
+      />
+
+      <ExportDialog
+        open={isExportDialogOpen}
+        onOpenChange={setIsExportDialogOpen}
+        onExport={generateQuote}
+      />
+
+      <CsvImportExportDialog
+        open={isCsvDialogOpen}
+        onOpenChange={setIsCsvDialogOpen}
+        products={products}
+        onImportProducts={importProducts}
       />
     </div>
   );
