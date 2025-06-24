@@ -1,7 +1,6 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
 export interface Product {
@@ -11,6 +10,42 @@ export interface Product {
   created_at?: string;
 }
 
+// Simulate API calls with localStorage
+const mockApi = {
+  getProducts: async (): Promise<Product[]> => {
+    const stored = localStorage.getItem('catering-products');
+    if (stored) {
+      return JSON.parse(stored);
+    }
+    return [];
+  },
+  
+  addProduct: async (product: { nome: string; prezzo: number }): Promise<Product> => {
+    const stored = localStorage.getItem('catering-products');
+    const products: Product[] = stored ? JSON.parse(stored) : [];
+    
+    const newProduct: Product = {
+      id: crypto.randomUUID(),
+      nome: product.nome,
+      prezzo: product.prezzo,
+      created_at: new Date().toISOString()
+    };
+    
+    products.push(newProduct);
+    localStorage.setItem('catering-products', JSON.stringify(products));
+    
+    return newProduct;
+  },
+  
+  removeProduct: async (productId: string): Promise<void> => {
+    const stored = localStorage.getItem('catering-products');
+    const products: Product[] = stored ? JSON.parse(stored) : [];
+    
+    const filteredProducts = products.filter(p => p.id !== productId);
+    localStorage.setItem('catering-products', JSON.stringify(filteredProducts));
+  }
+};
+
 export const useProducts = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -18,37 +53,12 @@ export const useProducts = () => {
   // Query per ottenere tutti i prodotti
   const { data: products = [], isLoading, error } = useQuery({
     queryKey: ['products'],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .order('created_at', { ascending: true });
-      
-      if (error) {
-        console.error('Errore nel caricamento prodotti:', error);
-        throw error;
-      }
-      
-      return data || [];
-    },
+    queryFn: mockApi.getProducts,
   });
 
   // Mutation per aggiungere un prodotto
   const addProductMutation = useMutation({
-    mutationFn: async ({ nome, prezzo }: { nome: string; prezzo: number }) => {
-      const { data, error } = await supabase
-        .from('products')
-        .insert({ nome, prezzo })
-        .select()
-        .single();
-      
-      if (error) {
-        console.error('Errore nell\'aggiunta del prodotto:', error);
-        throw error;
-      }
-      
-      return data;
-    },
+    mutationFn: mockApi.addProduct,
     onSuccess: (newProduct) => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({
@@ -68,17 +78,7 @@ export const useProducts = () => {
 
   // Mutation per rimuovere un prodotto
   const removeProductMutation = useMutation({
-    mutationFn: async (productId: string) => {
-      const { error } = await supabase
-        .from('products')
-        .delete()
-        .eq('id', productId);
-      
-      if (error) {
-        console.error('Errore nella rimozione del prodotto:', error);
-        throw error;
-      }
-    },
+    mutationFn: mockApi.removeProduct,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['products'] });
       toast({
