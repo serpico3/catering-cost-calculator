@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -9,53 +9,29 @@ import { Plus, Trash2, FileDown, UtensilsCrossed } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import AddProductDialog from '@/components/AddProductDialog';
 import RemoveProductDialog from '@/components/RemoveProductDialog';
+import SaveQuoteDialog from '@/components/SaveQuoteDialog';
+import { useProducts } from '@/hooks/useProducts';
 import jsPDF from 'jspdf';
 
-interface Product {
+interface SelectedProduct {
   id: string;
   nome: string;
   prezzo: number;
-}
-
-interface SelectedProduct extends Product {
   selected: boolean;
 }
 
 const Index = () => {
-  const [products, setProducts] = useState<Product[]>([]);
+  const { products, isLoading, addProduct, removeProduct } = useProducts();
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
   const [numberOfPeople, setNumberOfPeople] = useState<number>(1);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
+  const [isSaveQuoteDialogOpen, setIsSaveQuoteDialogOpen] = useState(false);
   const { toast } = useToast();
 
-  // Carica i prodotti dal localStorage al mount
-  useEffect(() => {
-    const savedProducts = localStorage.getItem('catering-products');
-    if (savedProducts) {
-      const parsedProducts = JSON.parse(savedProducts);
-      setProducts(parsedProducts);
-      setSelectedProducts(parsedProducts.map((p: Product) => ({ ...p, selected: false })));
-    } else {
-      // Prodotti di default
-      const defaultProducts = [
-        { id: '1', nome: 'Lasagne della casa', prezzo: 12.50 },
-        { id: '2', nome: 'Risotto ai funghi porcini', prezzo: 10.00 },
-        { id: '3', nome: 'Scaloppine al limone', prezzo: 15.00 },
-        { id: '4', nome: 'Tiramisù fatto in casa', prezzo: 6.00 },
-        { id: '5', nome: 'Panna cotta ai frutti di bosco', prezzo: 5.50 }
-      ];
-      setProducts(defaultProducts);
-      setSelectedProducts(defaultProducts.map(p => ({ ...p, selected: false })));
-      localStorage.setItem('catering-products', JSON.stringify(defaultProducts));
-    }
-  }, []);
-
-  // Salva i prodotti nel localStorage quando cambiano
-  useEffect(() => {
-    if (products.length > 0) {
-      localStorage.setItem('catering-products', JSON.stringify(products));
-    }
+  // Aggiorna selectedProducts quando products cambia
+  React.useEffect(() => {
+    setSelectedProducts(products.map(p => ({ ...p, selected: false })));
   }, [products]);
 
   const toggleProductSelection = (productId: string) => {
@@ -68,30 +44,12 @@ const Index = () => {
     );
   };
 
-  const addProduct = (nome: string, prezzo: number) => {
-    const newProduct = {
-      id: Date.now().toString(),
-      nome,
-      prezzo
-    };
-    
-    setProducts(prev => [...prev, newProduct]);
-    setSelectedProducts(prev => [...prev, { ...newProduct, selected: false }]);
-    
-    toast({
-      title: "Prodotto aggiunto",
-      description: `${nome} è stato aggiunto al menu`,
-    });
+  const handleAddProduct = (nome: string, prezzo: number) => {
+    addProduct({ nome, prezzo });
   };
 
-  const removeProduct = (productId: string) => {
-    setProducts(prev => prev.filter(p => p.id !== productId));
-    setSelectedProducts(prev => prev.filter(p => p.id !== productId));
-    
-    toast({
-      title: "Prodotto rimosso",
-      description: "Il prodotto è stato rimosso dal menu",
-    });
+  const handleRemoveProduct = (productId: string) => {
+    removeProduct(productId);
   };
 
   const calculateTotal = () => {
@@ -102,7 +60,7 @@ const Index = () => {
     return selectedTotal * numberOfPeople;
   };
 
-  const generateQuote = () => {
+  const handleGenerateQuote = () => {
     const selectedItems = selectedProducts.filter(p => p.selected);
     
     if (selectedItems.length === 0) {
@@ -114,6 +72,11 @@ const Index = () => {
       return;
     }
 
+    setIsSaveQuoteDialogOpen(true);
+  };
+
+  const generateQuote = (filename: string) => {
+    const selectedItems = selectedProducts.filter(p => p.selected);
     const currentDate = new Date().toLocaleDateString('it-IT');
     const subtotal = selectedItems.reduce((sum, product) => sum + product.prezzo, 0);
     const total = subtotal * numberOfPeople;
@@ -181,14 +144,25 @@ const Index = () => {
     doc.text('Grazie per averci scelto!', 20, yPosition);
     doc.text('Il preventivo è valido per 30 giorni.', 20, yPosition + 8);
     
-    // Salva il PDF
-    doc.save(`preventivo-catering-${currentDate.replace(/\//g, '-')}.pdf`);
+    // Salva il PDF con il nome scelto
+    doc.save(`${filename}.pdf`);
 
     toast({
       title: "Preventivo PDF generato",
       description: "Il file PDF è stato scaricato con successo",
     });
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50 flex items-center justify-center">
+        <div className="text-center">
+          <UtensilsCrossed className="h-12 w-12 text-orange-600 mx-auto mb-4 animate-spin" />
+          <p className="text-lg text-gray-600">Caricamento prodotti...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 via-red-50 to-yellow-50 p-4">
@@ -377,7 +351,7 @@ const Index = () => {
                 </div>
 
                 <Button
-                  onClick={generateQuote}
+                  onClick={handleGenerateQuote}
                   className="w-full mt-6 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-lg py-3"
                   disabled={!selectedProducts.some(p => p.selected)}
                 >
@@ -394,14 +368,20 @@ const Index = () => {
       <AddProductDialog
         open={isAddDialogOpen}
         onOpenChange={setIsAddDialogOpen}
-        onAddProduct={addProduct}
+        onAddProduct={handleAddProduct}
       />
       
       <RemoveProductDialog
         open={isRemoveDialogOpen}
         onOpenChange={setIsRemoveDialogOpen}
         products={products}
-        onRemoveProduct={removeProduct}
+        onRemoveProduct={handleRemoveProduct}
+      />
+
+      <SaveQuoteDialog
+        open={isSaveQuoteDialogOpen}
+        onOpenChange={setIsSaveQuoteDialogOpen}
+        onSaveQuote={generateQuote}
       />
     </div>
   );
