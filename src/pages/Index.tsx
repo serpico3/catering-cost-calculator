@@ -161,6 +161,7 @@ const Index = () => {
     const pageHeight = 280; // Altezza utilizzabile della pagina
     const lineHeight = 8;
     const startY = 115; // Posizione Y iniziale per i prodotti
+    let yPosition = startY; // Declare yPosition in the main scope
     
     const logoImg = new Image();
     logoImg.onload = function() {
@@ -173,7 +174,7 @@ const Index = () => {
 
     const generatePdfContent = () => {
       let currentPage = 1;
-      let yPosition = startY;
+      yPosition = startY; // Reset yPosition
 
       // Genera la prima pagina con intestazione
       generateHeader();
