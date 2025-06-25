@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Trash2, FileDown, UtensilsCrossed, FileText } from 'lucide-react';
+import { Plus, Trash2, FileDown, UtensilsCrossed, FileText, X } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import AddProductDialog from '@/components/AddProductDialog';
 import RemoveProductDialog from '@/components/RemoveProductDialog';
@@ -27,6 +27,7 @@ const Index = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [selectedProducts, setSelectedProducts] = useState<SelectedProduct[]>([]);
   const [numberOfPeople, setNumberOfPeople] = useState<number>(1);
+  const [peopleInput, setPeopleInput] = useState<string>('1');
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
@@ -70,6 +71,29 @@ const Index = () => {
           : product
       )
     );
+  };
+
+  const deselectAllProducts = () => {
+    setSelectedProducts(prev =>
+      prev.map(product => ({ ...product, selected: false }))
+    );
+    toast({
+      title: "Selezione rimossa",
+      description: "Tutti gli alimenti sono stati deselezionati",
+    });
+  };
+
+  const handlePeopleInputChange = (value: string) => {
+    setPeopleInput(value);
+    const num = parseInt(value) || 0;
+    if (num > 0) {
+      setNumberOfPeople(num);
+    }
+  };
+
+  const clearPeopleInput = () => {
+    setPeopleInput('');
+    setNumberOfPeople(1);
   };
 
   const addProduct = (nome: string, prezzo: number) => {
@@ -132,25 +156,70 @@ const Index = () => {
     const subtotal = selectedItems.reduce((sum, product) => sum + product.prezzo, 0);
     const total = subtotal * numberOfPeople;
 
-    // Crea PDF con dati corretti della cooperativa "i Piosi"
+    // Crea PDF con paginazione dinamica
     const doc = new jsPDF();
+    const pageHeight = 280; // Altezza utilizzabile della pagina
+    const lineHeight = 8;
+    const startY = 115; // Posizione Y iniziale per i prodotti
     
-    // Aggiungi logo (se l'immagine è disponibile)
     const logoImg = new Image();
     logoImg.onload = function() {
-      // Logo in alto a sinistra
-      doc.addImage(logoImg, 'PNG', 20, 15, 40, 20);
-      
-      // Continua con il resto del PDF dopo che il logo è caricato
       generatePdfContent();
     };
     logoImg.onerror = function() {
-      // Se il logo non si carica, continua senza
       generatePdfContent();
     };
     logoImg.src = '/lovable-uploads/2293249a-bf68-4522-8f20-970b1d6bdf43.png';
 
     const generatePdfContent = () => {
+      let currentPage = 1;
+      let yPosition = startY;
+
+      // Genera la prima pagina con intestazione
+      generateHeader();
+      
+      // Aggiungi prodotti con paginazione
+      selectedItems.forEach((item, index) => {
+        // Controlla se serve una nuova pagina
+        if (yPosition > pageHeight - 40) { // Lascia spazio per il footer
+          doc.addPage();
+          currentPage++;
+          yPosition = 30; // Reset Y position per la nuova pagina
+          
+          // Aggiungi header semplificato per le pagine successive
+          doc.setFontSize(12);
+          doc.setFont('helvetica', 'bold');
+          doc.text('PREVENTIVO CATERING - Continua', 20, 20);
+          doc.setLineWidth(0.3);
+          doc.line(20, 25, 190, 25);
+          yPosition = 40;
+        }
+        
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'normal');
+        doc.text(`${index + 1}. ${item.nome}`, 25, yPosition);
+        doc.text(`€${item.prezzo.toFixed(2)} per persona`, 130, yPosition);
+        yPosition += lineHeight;
+      });
+      
+      // Aggiungi riepilogo finale
+      addSummarySection();
+      
+      // Salva il PDF
+      doc.save(`${filename}.pdf`);
+
+      toast({
+        title: "Preventivo PDF generato",
+        description: "Il file PDF è stato scaricato con successo",
+      });
+    };
+
+    const generateHeader = () => {
+      // Logo in alto a sinistra (se disponibile)
+      if (logoImg.complete) {
+        doc.addImage(logoImg, 'PNG', 20, 15, 40, 20);
+      }
+      
       // Intestazione
       doc.setFontSize(20);
       doc.setFont('helvetica', 'bold');
@@ -172,22 +241,19 @@ const Index = () => {
       doc.text(`Data: ${currentDate}`, 130, 55);
       doc.text(`Numero persone: ${numberOfPeople}`, 130, 63);
       
-      // Prodotti selezionati
+      // Titolo prodotti selezionati
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.text('PRODOTTI SELEZIONATI:', 20, 100);
+    };
+
+    const addSummarySection = () => {
+      // Controlla se c'è spazio per il riepilogo
+      if (yPosition > pageHeight - 60) {
+        doc.addPage();
+        yPosition = 30;
+      }
       
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'normal');
-      let yPosition = 115;
-      
-      selectedItems.forEach((item, index) => {
-        doc.text(`${index + 1}. ${item.nome}`, 25, yPosition);
-        doc.text(`€${item.prezzo.toFixed(2)} per persona`, 130, yPosition);
-        yPosition += 8;
-      });
-      
-      // Riepilogo
       yPosition += 10;
       doc.setLineWidth(0.3);
       doc.line(20, yPosition, 190, yPosition);
@@ -211,14 +277,6 @@ const Index = () => {
       doc.text('Grazie per averci scelto per il vostro evento!', 20, yPosition);
       doc.text('Il preventivo è valido per 30 giorni dalla data di emissione.', 20, yPosition + 8);
       doc.text('La cooperativa sociale "i Piosi" si impegna per la qualità e la solidarietà.', 20, yPosition + 16);
-      
-      // Salva il PDF
-      doc.save(`${filename}.pdf`);
-
-      toast({
-        title: "Preventivo PDF generato",
-        description: "Il file PDF è stato scaricato con successo",
-      });
     };
 
     // Se il logo non si carica entro 2 secondi, procedi comunque
@@ -252,6 +310,20 @@ const Index = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
+                {/* Pulsante Deseleziona Tutto */}
+                {selectedProducts.some(p => p.selected) && (
+                  <div className="mb-4 pb-4 border-b">
+                    <Button
+                      onClick={deselectAllProducts}
+                      variant="outline"
+                      className="border-orange-500 text-orange-600 hover:bg-orange-50"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Deseleziona Tutto
+                    </Button>
+                  </div>
+                )}
+
                 {/* Area di scorrimento condizionale */}
                 {selectedProducts.length > 7 ? (
                   <ScrollArea className="h-[400px] pr-4">
@@ -371,14 +443,28 @@ const Index = () => {
                   <Label htmlFor="people-count" className="text-lg font-medium">
                     Quante persone parteciperanno?
                   </Label>
-                  <Input
-                    id="people-count"
-                    type="number"
-                    min="1"
-                    value={numberOfPeople}
-                    onChange={(e) => setNumberOfPeople(Math.max(1, parseInt(e.target.value) || 1))}
-                    className="text-xl font-bold text-center border-2 border-blue-300 focus:border-blue-500"
-                  />
+                  <div className="flex items-center space-x-2">
+                    <Input
+                      id="people-count"
+                      type="number"
+                      min="1"
+                      placeholder="Inserisci numero"
+                      value={peopleInput}
+                      onChange={(e) => handlePeopleInputChange(e.target.value)}
+                      className="text-xl font-bold text-center border-2 border-blue-300 focus:border-blue-500 flex-1"
+                    />
+                    <Button
+                      onClick={clearPeopleInput}
+                      variant="outline"
+                      size="icon"
+                      className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-sm text-gray-600">
+                    Partecipanti confermati: <span className="font-semibold">{numberOfPeople}</span>
+                  </p>
                 </div>
               </CardContent>
             </Card>
