@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -5,12 +6,13 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Trash2, FileDown, UtensilsCrossed, FileText, X } from 'lucide-react';
+import { Plus, Trash2, FileDown, UtensilsCrossed, FileText, X, Edit } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import AddProductDialog from '@/components/AddProductDialog';
 import RemoveProductDialog from '@/components/RemoveProductDialog';
 import ExportDialog from '@/components/ExportDialog';
 import CsvImportExportDialog from '@/components/CsvImportExportDialog';
+import EditProductDialog from '@/components/EditProductDialog';
 import jsPDF from 'jspdf';
 
 interface Product {
@@ -32,6 +34,8 @@ const Index = () => {
   const [isRemoveDialogOpen, setIsRemoveDialogOpen] = useState(false);
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isCsvDialogOpen, setIsCsvDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const { toast } = useToast();
 
   // Carica i prodotti dal localStorage al mount
@@ -110,6 +114,25 @@ const Index = () => {
       title: "Prodotto aggiunto",
       description: `${nome} è stato aggiunto al menu`,
     });
+  };
+
+  const editProduct = (id: string, nome: string, prezzo: number) => {
+    setProducts(prev => 
+      prev.map(p => p.id === id ? { ...p, nome, prezzo } : p)
+    );
+    setSelectedProducts(prev => 
+      prev.map(p => p.id === id ? { ...p, nome, prezzo } : p)
+    );
+    
+    toast({
+      title: "Prodotto modificato",
+      description: `${nome} è stato modificato con successo`,
+    });
+  };
+
+  const openEditDialog = (product: Product) => {
+    setEditingProduct(product);
+    setIsEditDialogOpen(true);
   };
 
   const removeProduct = (productId: string) => {
@@ -199,7 +222,6 @@ const Index = () => {
         doc.setFontSize(11);
         doc.setFont('helvetica', 'normal');
         doc.text(`${index + 1}. ${item.nome}`, 25, yPosition);
-        doc.text(`€${item.prezzo.toFixed(2)} per persona`, 130, yPosition);
         yPosition += lineHeight;
       });
       
@@ -250,7 +272,7 @@ const Index = () => {
 
     const addSummarySection = () => {
       // Controlla se c'è spazio per il riepilogo
-      if (yPosition > pageHeight - 60) {
+      if (yPosition > pageHeight - 80) {
         doc.addPage();
         yPosition = 30;
       }
@@ -269,10 +291,22 @@ const Index = () => {
       
       doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
-      doc.text(`TOTALE COMPLESSIVO: €${total.toFixed(2)}`, 20, yPosition);
+      doc.text(`TOTALE COMPLESSIVO: €${total.toFixed(2)} (IVA ESCLUSA)`, 20, yPosition);
+      
+      // Note aggiuntive
+      yPosition += 20;
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('NOTE IMPORTANTI:', 20, yPosition);
+      yPosition += 8;
+      doc.text('• Il servizio verrà fornito con materiale usa e getta riciclabile', 20, yPosition);
+      yPosition += 6;
+      doc.text('• Per l\'utilizzo di stoviglie di diverso genere, contattare per', 20, yPosition);
+      yPosition += 6;
+      doc.text('  una modifica al preventivo', 20, yPosition);
       
       // Footer
-      yPosition += 25;
+      yPosition += 15;
       doc.setFontSize(10);
       doc.setFont('helvetica', 'italic');
       doc.text('Grazie per averci scelto per il vostro evento!', 20, yPosition);
@@ -338,14 +372,14 @@ const Index = () => {
                               : 'border-gray-200 bg-white hover:border-orange-300'
                           }`}
                         >
-                          <div className="flex items-center space-x-3">
+                          <div className="flex items-center space-x-3 flex-1">
                             <Checkbox
                               id={product.id}
                               checked={product.selected}
                               onCheckedChange={() => toggleProductSelection(product.id)}
                               className="h-5 w-5"
                             />
-                            <div>
+                            <div className="flex-1">
                               <label
                                 htmlFor={product.id}
                                 className="text-lg font-medium text-gray-800 cursor-pointer"
@@ -354,11 +388,21 @@ const Index = () => {
                               </label>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <span className="text-xl font-bold text-orange-600">
-                              €{product.prezzo.toFixed(2)}
-                            </span>
-                            <div className="text-sm text-gray-500">per persona</div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <span className="text-xl font-bold text-orange-600">
+                                €{product.prezzo.toFixed(2)}
+                              </span>
+                              <div className="text-sm text-gray-500">per persona</div>
+                            </div>
+                            <Button
+                              onClick={() => openEditDialog(product)}
+                              variant="outline"
+                              size="icon"
+                              className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
                           </div>
                         </div>
                       ))}
@@ -375,14 +419,14 @@ const Index = () => {
                             : 'border-gray-200 bg-white hover:border-orange-300'
                         }`}
                       >
-                        <div className="flex items-center space-x-3">
+                        <div className="flex items-center space-x-3 flex-1">
                           <Checkbox
                             id={product.id}
                             checked={product.selected}
                             onCheckedChange={() => toggleProductSelection(product.id)}
                             className="h-5 w-5"
                           />
-                          <div>
+                          <div className="flex-1">
                             <label
                               htmlFor={product.id}
                               className="text-lg font-medium text-gray-800 cursor-pointer"
@@ -391,11 +435,21 @@ const Index = () => {
                             </label>
                           </div>
                         </div>
-                        <div className="text-right">
-                          <span className="text-xl font-bold text-orange-600">
-                            €{product.prezzo.toFixed(2)}
-                          </span>
-                          <div className="text-sm text-gray-500">per persona</div>
+                        <div className="flex items-center gap-3">
+                          <div className="text-right">
+                            <span className="text-xl font-bold text-orange-600">
+                              €{product.prezzo.toFixed(2)}
+                            </span>
+                            <div className="text-sm text-gray-500">per persona</div>
+                          </div>
+                          <Button
+                            onClick={() => openEditDialog(product)}
+                            variant="outline"
+                            size="icon"
+                            className="border-blue-500 text-blue-600 hover:bg-blue-50"
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -549,6 +603,13 @@ const Index = () => {
         onOpenChange={setIsCsvDialogOpen}
         products={products}
         onImportProducts={importProducts}
+      />
+
+      <EditProductDialog
+        open={isEditDialogOpen}
+        onOpenChange={setIsEditDialogOpen}
+        product={editingProduct}
+        onEditProduct={editProduct}
       />
     </div>
   );
