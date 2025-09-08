@@ -7,7 +7,7 @@ import { FixedCosts } from './useFixedCosts';
 export const usePdfGenerator = () => {
   const { toast } = useToast();
 
-  const generateQuote = (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCosts, vehicleType: 'camioncino' | 'furgone') => {
+  const generateQuote = (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCosts) => {
     const selectedItems = selectedProducts.filter(p => p.selected);
     
     if (selectedItems.length === 0) {
@@ -22,8 +22,8 @@ export const usePdfGenerator = () => {
     const currentDate = new Date().toLocaleDateString('it-IT');
     const subtotal = selectedItems.reduce((sum, product) => sum + product.prezzo, 0);
     const totalFood = subtotal * numberOfPeople;
-    const vehicleCost = fixedCosts[vehicleType];
-    const grandTotal = totalFood + vehicleCost;
+    const totalFixedCosts = fixedCosts.foodLoop + fixedCosts.panche + fixedCosts.personale;
+    const grandTotal = totalFood + totalFixedCosts;
 
     // Create PDF with dynamic pagination
     const doc = new jsPDF();
@@ -136,7 +136,11 @@ export const usePdfGenerator = () => {
       yPosition += 8;
       doc.text(`Subtotale cibo: €${totalFood.toFixed(2)}`, 20, yPosition);
       yPosition += 8;
-      doc.text(`Costo fisso uscita ${vehicleType}: €${vehicleCost.toFixed(2)}`, 20, yPosition);
+      doc.text(`Food Loop: €${fixedCosts.foodLoop.toFixed(2)}`, 20, yPosition);
+      yPosition += 8;
+      doc.text(`Panche: €${fixedCosts.panche.toFixed(2)}`, 20, yPosition);
+      yPosition += 8;
+      doc.text(`Personale: €${fixedCosts.personale.toFixed(2)}`, 20, yPosition);
       yPosition += 15;
       
       doc.setFontSize(16);
@@ -172,7 +176,7 @@ export const usePdfGenerator = () => {
     }, 2000);
   };
 
-  const generateInternalQuote = (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCosts, vehicleType: 'camioncino' | 'furgone') => {
+  const generateInternalQuote = (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCosts) => {
     const selectedItems = selectedProducts.filter(p => p.selected);
     
     if (selectedItems.length === 0) {
@@ -189,9 +193,9 @@ export const usePdfGenerator = () => {
     const subtotalProduction = selectedItems.reduce((sum, product) => sum + (product.costoProduzione || 0), 0);
     const totalFoodSelling = subtotalSelling * numberOfPeople;
     const totalFoodProduction = subtotalProduction * numberOfPeople;
-    const vehicleCost = fixedCosts[vehicleType];
-    const grandTotalSelling = totalFoodSelling + vehicleCost;
-    const totalCosts = totalFoodProduction + vehicleCost;
+    const totalFixedCosts = fixedCosts.foodLoop + fixedCosts.panche + fixedCosts.personale;
+    const grandTotalSelling = totalFoodSelling + totalFixedCosts;
+    const totalCosts = totalFoodProduction + totalFixedCosts;
     const profit = grandTotalSelling - totalCosts;
 
     // Create PDF
@@ -285,7 +289,7 @@ export const usePdfGenerator = () => {
       doc.setFont('helvetica', 'normal');
       doc.text(`Data: ${currentDate}`, 20, 70);
       doc.text(`Numero persone: ${numberOfPeople}`, 20, 78);
-      doc.text(`Veicolo: ${vehicleType}`, 20, 86);
+      doc.text(`Costi fissi totali: €${totalFixedCosts.toFixed(2)}`, 20, 86);
       
       // Products title
       doc.setFontSize(14);
@@ -315,7 +319,7 @@ export const usePdfGenerator = () => {
       yPosition += 8;
       doc.text(`Costi produzione cibo: €${totalFoodProduction.toFixed(2)}`, 20, yPosition);
       yPosition += 8;
-      doc.text(`Costo fisso ${vehicleType}: €${vehicleCost.toFixed(2)}`, 20, yPosition);
+      doc.text(`Costi fissi totali: €${totalFixedCosts.toFixed(2)}`, 20, yPosition);
       yPosition += 8;
       doc.text(`Costi totali: €${totalCosts.toFixed(2)}`, 20, yPosition);
       yPosition += 15;

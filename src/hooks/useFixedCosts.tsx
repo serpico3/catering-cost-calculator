@@ -1,14 +1,16 @@
 import { useState, useEffect } from 'react';
 
 export interface FixedCosts {
-  camioncino: number;
-  furgone: number;
+  foodLoop: number;
+  panche: number;
+  personale: number;
 }
 
 export const useFixedCosts = () => {
   const [fixedCosts, setFixedCosts] = useState<FixedCosts>({
-    camioncino: 50,
-    furgone: 80
+    foodLoop: 100,
+    panche: 50,
+    personale: 120
   });
 
   // Load fixed costs from localStorage on mount

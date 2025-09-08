@@ -12,8 +12,8 @@ interface QuoteSummaryProps {
   selectedProducts: SelectedProduct[];
   numberOfPeople: number;
   fixedCosts: FixedCosts;
-  onGenerateQuote: (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCosts, vehicleType: 'camioncino' | 'furgone') => void;
-  onGenerateInternalQuote: (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCosts, vehicleType: 'camioncino' | 'furgone') => void;
+  onGenerateQuote: (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCosts) => void;
+  onGenerateInternalQuote: (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCosts) => void;
   onUpdateFixedCosts: (costs: FixedCosts) => void;
 }
 
@@ -21,7 +21,6 @@ const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onGenerate
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isInternalExportDialogOpen, setIsInternalExportDialogOpen] = useState(false);
   const [isFixedCostsDialogOpen, setIsFixedCostsDialogOpen] = useState(false);
-  const [selectedVehicle, setSelectedVehicle] = useState<'camioncino' | 'furgone'>('camioncino');
 
   const calculateTotal = () => {
     const selectedTotal = selectedProducts
@@ -29,16 +28,16 @@ const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onGenerate
       .reduce((sum, product) => sum + product.prezzo, 0);
     
     const foodTotal = selectedTotal * numberOfPeople;
-    const vehicleCost = fixedCosts[selectedVehicle];
-    return foodTotal + vehicleCost;
+    const totalFixedCosts = fixedCosts.foodLoop + fixedCosts.panche + fixedCosts.personale;
+    return foodTotal + totalFixedCosts;
   };
 
   const handleExport = (filename: string) => {
-    onGenerateQuote(filename, selectedProducts, numberOfPeople, fixedCosts, selectedVehicle);
+    onGenerateQuote(filename, selectedProducts, numberOfPeople, fixedCosts);
   };
 
   const handleInternalExport = (filename: string) => {
-    onGenerateInternalQuote(filename, selectedProducts, numberOfPeople, fixedCosts, selectedVehicle);
+    onGenerateInternalQuote(filename, selectedProducts, numberOfPeople, fixedCosts);
   };
 
   return (
@@ -74,24 +73,26 @@ const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onGenerate
                 </div>
               </div>
 
-              {/* Vehicle Selection */}
+              {/* Fixed Costs Section */}
               <div className="border-t pt-3 space-y-2">
-                <h4 className="font-medium">Tipo di veicolo:</h4>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant={selectedVehicle === 'camioncino' ? 'default' : 'outline'}
-                    onClick={() => setSelectedVehicle('camioncino')}
-                  >
-                    Camioncino (€{fixedCosts.camioncino})
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={selectedVehicle === 'furgone' ? 'default' : 'outline'}
-                    onClick={() => setSelectedVehicle('furgone')}
-                  >
-                    Furgone (€{fixedCosts.furgone})
-                  </Button>
+                <h4 className="font-medium">Costi fissi:</h4>
+                <div className="text-sm space-y-1">
+                  <div className="flex justify-between">
+                    <span>Food Loop:</span>
+                    <span>€{fixedCosts.foodLoop.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Panche:</span>
+                    <span>€{fixedCosts.panche.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Personale:</span>
+                    <span>€{fixedCosts.personale.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-medium border-t pt-1">
+                    <span>Totale costi fissi:</span>
+                    <span>€{(fixedCosts.foodLoop + fixedCosts.panche + fixedCosts.personale).toFixed(2)}</span>
+                  </div>
                 </div>
                 <Button
                   size="sm"

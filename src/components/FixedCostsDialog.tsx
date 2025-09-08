@@ -14,27 +14,32 @@ interface FixedCostsDialogProps {
 }
 
 const FixedCostsDialog = ({ open, onOpenChange, fixedCosts, onUpdateFixedCosts }: FixedCostsDialogProps) => {
-  const [camioncino, setCamioncino] = useState('');
-  const [furgone, setFurgone] = useState('');
+  const [foodLoop, setFoodLoop] = useState('');
+  const [panche, setPanche] = useState('');
+  const [personale, setPersonale] = useState('');
 
   useEffect(() => {
-    setCamioncino(fixedCosts.camioncino.toString());
-    setFurgone(fixedCosts.furgone.toString());
+    setFoodLoop(fixedCosts.foodLoop.toString());
+    setPanche(fixedCosts.panche.toString());
+    setPersonale(fixedCosts.personale.toString());
   }, [fixedCosts]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    const camioncinoValue = parseFloat(camioncino);
-    const furgoneValue = parseFloat(furgone);
+    const foodLoopValue = parseFloat(foodLoop);
+    const pancheValue = parseFloat(panche);
+    const personaleValue = parseFloat(personale);
     
-    if (isNaN(camioncinoValue) || isNaN(furgoneValue) || camioncinoValue < 0 || furgoneValue < 0) {
+    if (isNaN(foodLoopValue) || isNaN(pancheValue) || isNaN(personaleValue) || 
+        foodLoopValue < 0 || pancheValue < 0 || personaleValue < 0) {
       return;
     }
 
     onUpdateFixedCosts({
-      camioncino: camioncinoValue,
-      furgone: furgoneValue
+      foodLoop: foodLoopValue,
+      panche: pancheValue,
+      personale: personaleValue
     });
     onOpenChange(false);
   };
@@ -51,29 +56,43 @@ const FixedCostsDialog = ({ open, onOpenChange, fixedCosts, onUpdateFixedCosts }
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="camioncino-cost">Costo uscita camioncino (€)</Label>
+            <Label htmlFor="foodloop-cost">Costo Food Loop (€)</Label>
             <Input
-              id="camioncino-cost"
+              id="foodloop-cost"
               type="number"
               step="0.01"
               min="0"
-              value={camioncino}
-              onChange={(e) => setCamioncino(e.target.value)}
-              placeholder="es. 50.00"
+              value={foodLoop}
+              onChange={(e) => setFoodLoop(e.target.value)}
+              placeholder="es. 100.00"
               required
             />
           </div>
           
           <div className="space-y-2">
-            <Label htmlFor="furgone-cost">Costo uscita furgone (€)</Label>
+            <Label htmlFor="panche-cost">Costo Panche (€)</Label>
             <Input
-              id="furgone-cost"
+              id="panche-cost"
               type="number"
               step="0.01"
               min="0"
-              value={furgone}
-              onChange={(e) => setFurgone(e.target.value)}
-              placeholder="es. 80.00"
+              value={panche}
+              onChange={(e) => setPanche(e.target.value)}
+              placeholder="es. 50.00"
+              required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="personale-cost">Costo Personale (€)</Label>
+            <Input
+              id="personale-cost"
+              type="number"
+              step="0.01"
+              min="0"
+              value={personale}
+              onChange={(e) => setPersonale(e.target.value)}
+              placeholder="es. 120.00"
               required
             />
           </div>
