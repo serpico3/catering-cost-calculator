@@ -16,8 +16,8 @@ interface ProductListProps {
   products: Product[];
   onToggleSelection: (productId: string) => void;
   onDeselectAll: () => void;
-  onAddProduct: (nome: string, prezzo: number) => void;
-  onEditProduct: (id: string, nome: string, prezzo: number) => void;
+  onAddProduct: (nome: string, prezzo: number, costoProduzione?: number) => void;
+  onEditProduct: (id: string, nome: string, prezzo: number, costoProduzione?: number) => void;
   onRemoveProduct: (productId: string) => void;
   onImportProducts: (products: Product[]) => void;
 }

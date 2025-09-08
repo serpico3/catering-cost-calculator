@@ -10,23 +10,26 @@ interface Product {
   id: string;
   nome: string;
   prezzo: number;
+  costoProduzione?: number;
 }
 
 interface EditProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   product: Product | null;
-  onEditProduct: (id: string, nome: string, prezzo: number) => void;
+  onEditProduct: (id: string, nome: string, prezzo: number, costoProduzione?: number) => void;
 }
 
 const EditProductDialog = ({ open, onOpenChange, product, onEditProduct }: EditProductDialogProps) => {
   const [nome, setNome] = useState('');
   const [prezzo, setPrezzo] = useState('');
+  const [costoProduzione, setCostoProduzione] = useState('');
 
   useEffect(() => {
     if (product) {
       setNome(product.nome);
       setPrezzo(product.prezzo.toString());
+      setCostoProduzione(product.costoProduzione?.toString() || '');
     }
   }, [product]);
 
@@ -35,16 +38,22 @@ const EditProductDialog = ({ open, onOpenChange, product, onEditProduct }: EditP
     
     const nomeValue = nome.trim();
     const prezzoValue = parseFloat(prezzo);
+    const costoProduzioneValue = costoProduzione.trim() ? parseFloat(costoProduzione) : undefined;
     
     if (!nomeValue || isNaN(prezzoValue) || prezzoValue <= 0) {
       return;
     }
 
+    if (costoProduzione.trim() && (isNaN(costoProduzioneValue!) || costoProduzioneValue! < 0)) {
+      return;
+    }
+
     if (product) {
-      onEditProduct(product.id, nomeValue, prezzoValue);
+      onEditProduct(product.id, nomeValue, prezzoValue, costoProduzioneValue);
       onOpenChange(false);
       setNome('');
       setPrezzo('');
+      setCostoProduzione('');
     }
   };
 
@@ -81,6 +90,19 @@ const EditProductDialog = ({ open, onOpenChange, product, onEditProduct }: EditP
               onChange={(e) => setPrezzo(e.target.value)}
               placeholder="Es. 12.50"
               required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="edit-costo-produzione">Costo di produzione (€) - Opzionale</Label>
+            <Input
+              id="edit-costo-produzione"
+              type="number"
+              step="0.01"
+              min="0"
+              value={costoProduzione}
+              onChange={(e) => setCostoProduzione(e.target.value)}
+              placeholder="Es. 4.50"
             />
           </div>
 

@@ -9,6 +9,7 @@ interface Product {
   id: string;
   nome: string;
   prezzo: number;
+  costoProduzione?: number;
 }
 
 interface CsvImportExportDialogProps {
@@ -24,15 +25,15 @@ const CsvImportExportDialog = ({ open, onOpenChange, products, onImportProducts 
 
   const exportToCsv = () => {
     const csvContent = [
-      'nome,prezzo',
-      ...products.map(p => `"${p.nome}",${p.prezzo}`)
+      'nome,prezzo,costoProduzione',
+      ...products.map(p => `"${p.nome}",${p.prezzo},${p.costoProduzione || ''}`)
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', 'prodotti-catering.csv');
+    link.setAttribute('download', 'backup-prodotti-catering.csv');
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -40,7 +41,7 @@ const CsvImportExportDialog = ({ open, onOpenChange, products, onImportProducts 
 
     toast({
       title: "CSV esportato",
-      description: "File prodotti-catering.csv scaricato con successo",
+      description: "File backup-prodotti-catering.csv scaricato con successo",
     });
   };
 
@@ -58,20 +59,27 @@ const CsvImportExportDialog = ({ open, onOpenChange, products, onImportProducts 
         const dataLines = lines.slice(1);
         
         const importedProducts: Product[] = dataLines.map((line, index) => {
-          const [nome, prezzoStr] = line.split(',').map(field => 
+          const parts = line.split(',').map(field => 
             field.replace(/^"|"$/g, '').trim()
           );
           
+          const [nome, prezzoStr, costoProduzioneStr] = parts;
           const prezzo = parseFloat(prezzoStr);
+          const costoProduzione = costoProduzioneStr && costoProduzioneStr !== '' ? parseFloat(costoProduzioneStr) : undefined;
           
           if (!nome || isNaN(prezzo)) {
             throw new Error(`Riga ${index + 2}: formato non valido`);
           }
           
+          if (costoProduzioneStr && costoProduzioneStr !== '' && isNaN(costoProduzione!)) {
+            throw new Error(`Riga ${index + 2}: costo produzione non valido`);
+          }
+          
           return {
             id: Date.now().toString() + index,
             nome,
-            prezzo
+            prezzo,
+            costoProduzione
           };
         });
 
@@ -112,9 +120,10 @@ const CsvImportExportDialog = ({ open, onOpenChange, products, onImportProducts 
               <strong>Formato CSV richiesto:</strong>
             </p>
             <code className="block bg-gray-100 p-2 rounded text-xs">
-              nome,prezzo<br/>
-              "Lasagne della casa",12.50<br/>
-              "Risotto ai funghi",10.00
+              nome,prezzo,costoProduzione<br/>
+              "Lasagne della casa",12.50,6.00<br/>
+              "Risotto ai funghi",10.00,4.50<br/>
+              "Prodotto senza costo",8.00,
             </code>
           </div>
         </div>

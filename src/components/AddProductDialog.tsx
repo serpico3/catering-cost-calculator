@@ -15,12 +15,13 @@ import { Plus } from 'lucide-react';
 interface AddProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onAddProduct: (nome: string, prezzo: number) => void;
+  onAddProduct: (nome: string, prezzo: number, costoProduzione?: number) => void;
 }
 
 const AddProductDialog = ({ open, onOpenChange, onAddProduct }: AddProductDialogProps) => {
   const [nome, setNome] = useState('');
   const [prezzo, setPrezzo] = useState<string>('');
+  const [costoProduzione, setCostoProduzione] = useState<string>('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,15 +35,22 @@ const AddProductDialog = ({ open, onOpenChange, onAddProduct }: AddProductDialog
       return;
     }
 
-    onAddProduct(nome.trim(), prezzoNumerico);
+    const costoProduzioneNumerico = costoProduzione.trim() ? parseFloat(costoProduzione) : undefined;
+    if (costoProduzione.trim() && (isNaN(costoProduzioneNumerico!) || costoProduzioneNumerico! < 0)) {
+      return;
+    }
+
+    onAddProduct(nome.trim(), prezzoNumerico, costoProduzioneNumerico);
     setNome('');
     setPrezzo('');
+    setCostoProduzione('');
     onOpenChange(false);
   };
 
   const handleClose = () => {
     setNome('');
     setPrezzo('');
+    setCostoProduzione('');
     onOpenChange(false);
   };
 
@@ -79,6 +87,19 @@ const AddProductDialog = ({ open, onOpenChange, onAddProduct }: AddProductDialog
               onChange={(e) => setPrezzo(e.target.value)}
               placeholder="es. 8.50"
               required
+            />
+          </div>
+          
+          <div className="space-y-2">
+            <Label htmlFor="production-cost">Costo di produzione (€) - Opzionale</Label>
+            <Input
+              id="production-cost"
+              type="number"
+              step="0.01"
+              min="0"
+              value={costoProduzione}
+              onChange={(e) => setCostoProduzione(e.target.value)}
+              placeholder="es. 4.50"
             />
           </div>
           

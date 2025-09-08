@@ -6,6 +6,7 @@ export interface Product {
   id: string;
   nome: string;
   prezzo: number;
+  costoProduzione?: number; // Optional for backward compatibility
 }
 
 export interface SelectedProduct extends Product {
@@ -66,11 +67,12 @@ export const useProducts = () => {
     });
   };
 
-  const addProduct = (nome: string, prezzo: number) => {
+  const addProduct = (nome: string, prezzo: number, costoProduzione?: number) => {
     const newProduct = {
       id: Date.now().toString(),
       nome,
-      prezzo
+      prezzo,
+      costoProduzione
     };
     
     setProducts(prev => [...prev, newProduct]);
@@ -82,12 +84,12 @@ export const useProducts = () => {
     });
   };
 
-  const editProduct = (id: string, nome: string, prezzo: number) => {
+  const editProduct = (id: string, nome: string, prezzo: number, costoProduzione?: number) => {
     setProducts(prev => 
-      prev.map(p => p.id === id ? { ...p, nome, prezzo } : p)
+      prev.map(p => p.id === id ? { ...p, nome, prezzo, costoProduzione } : p)
     );
     setSelectedProducts(prev => 
-      prev.map(p => p.id === id ? { ...p, nome, prezzo } : p)
+      prev.map(p => p.id === id ? { ...p, nome, prezzo, costoProduzione } : p)
     );
     
     toast({
