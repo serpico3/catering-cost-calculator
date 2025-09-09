@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { FileDown, Settings, FileText } from 'lucide-react';
 import { SelectedProduct } from '@/hooks/useProducts';
 import { FixedCostItem } from '@/hooks/useDynamicFixedCosts';
@@ -23,6 +25,7 @@ const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onGenerate
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isInternalExportDialogOpen, setIsInternalExportDialogOpen] = useState(false);
   const [isFixedCostsDialogOpen, setIsFixedCostsDialogOpen] = useState(false);
+  const [includeFixedCostsInQuote, setIncludeFixedCostsInQuote] = useState(true);
 
   const calculateTotal = () => {
     const selectedTotal = selectedProducts
@@ -35,7 +38,8 @@ const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onGenerate
   };
 
   const handleExport = (filename: string) => {
-    onGenerateQuote(filename, selectedProducts, numberOfPeople, fixedCosts);
+    const costsToInclude = includeFixedCostsInQuote ? fixedCosts : [];
+    onGenerateQuote(filename, selectedProducts, numberOfPeople, costsToInclude);
   };
 
   const handleInternalExport = (filename: string) => {
@@ -109,6 +113,19 @@ const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onGenerate
               </div>
             </>
           )}
+        </div>
+
+        <div className="border-t pt-4 mt-4">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="include-fixed-costs"
+              checked={includeFixedCostsInQuote}
+              onCheckedChange={setIncludeFixedCostsInQuote}
+            />
+            <Label htmlFor="include-fixed-costs" className="text-sm font-medium">
+              Includi costi fissi nel preventivo cliente
+            </Label>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 gap-3 mt-6">
