@@ -81,7 +81,7 @@ const Index = () => {
               selectedProducts={selectedProducts}
               numberOfPeople={numberOfPeople}
               fixedCosts={fixedCosts}
-              onGenerateQuote={generateQuote}
+              onGenerateQuote={(filename, products, people, costs, includeFixed) => generateQuote(filename, products, people, costs, includeFixed)}
               onGenerateInternalQuote={generateInternalQuote}
               onAddFixedCost={addFixedCost}
               onUpdateFixedCost={updateFixedCost}

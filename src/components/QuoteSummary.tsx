@@ -14,7 +14,7 @@ interface QuoteSummaryProps {
   selectedProducts: SelectedProduct[];
   numberOfPeople: number;
   fixedCosts: FixedCostItem[];
-  onGenerateQuote: (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCostItem[]) => void;
+  onGenerateQuote: (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCostItem[], includeFixedCosts?: boolean) => void;
   onGenerateInternalQuote: (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCostItem[]) => void;
   onAddFixedCost: (nome: string, costo: number) => void;
   onUpdateFixedCost: (id: string, nome: string, costo: number) => void;
@@ -38,8 +38,7 @@ const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onGenerate
   };
 
   const handleExport = (filename: string) => {
-    const costsToInclude = includeFixedCostsInQuote ? fixedCosts : [];
-    onGenerateQuote(filename, selectedProducts, numberOfPeople, costsToInclude);
+    onGenerateQuote(filename, selectedProducts, numberOfPeople, fixedCosts, includeFixedCostsInQuote);
   };
 
   const handleInternalExport = (filename: string) => {
