@@ -2,26 +2,27 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { FileDown, Truck, FileText } from 'lucide-react';
+import { FileDown, Settings, FileText } from 'lucide-react';
 import { SelectedProduct } from '@/hooks/useProducts';
-import { FixedCosts } from '@/hooks/useFixedCosts';
+import { FixedCostItem } from '@/hooks/useDynamicFixedCosts';
 import ExportDialog from '@/components/ExportDialog';
-import FixedCostsDialog from '@/components/FixedCostsDialog';
+import DynamicFixedCostsDialog from '@/components/DynamicFixedCostsDialog';
 
 interface QuoteSummaryProps {
   selectedProducts: SelectedProduct[];
   numberOfPeople: number;
-  fixedCosts: FixedCosts;
-  onGenerateQuote: (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCosts, vehicleType: 'camioncino' | 'furgone') => void;
-  onGenerateInternalQuote: (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCosts, vehicleType: 'camioncino' | 'furgone') => void;
-  onUpdateFixedCosts: (costs: FixedCosts) => void;
+  fixedCosts: FixedCostItem[];
+  onGenerateQuote: (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCostItem[]) => void;
+  onGenerateInternalQuote: (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCostItem[]) => void;
+  onAddFixedCost: (nome: string, costo: number) => void;
+  onUpdateFixedCost: (id: string, nome: string, costo: number) => void;
+  onRemoveFixedCost: (id: string) => void;
 }
 
-const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onGenerateQuote, onGenerateInternalQuote, onUpdateFixedCosts }: QuoteSummaryProps) => {
+const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onGenerateQuote, onGenerateInternalQuote, onAddFixedCost, onUpdateFixedCost, onRemoveFixedCost }: QuoteSummaryProps) => {
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
   const [isInternalExportDialogOpen, setIsInternalExportDialogOpen] = useState(false);
   const [isFixedCostsDialogOpen, setIsFixedCostsDialogOpen] = useState(false);
-  const [selectedVehicle, setSelectedVehicle] = useState<'camioncino' | 'furgone'>('camioncino');
 
   const calculateTotal = () => {
     const selectedTotal = selectedProducts
@@ -29,16 +30,16 @@ const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onGenerate
       .reduce((sum, product) => sum + product.prezzo, 0);
     
     const foodTotal = selectedTotal * numberOfPeople;
-    const vehicleCost = fixedCosts[selectedVehicle];
-    return foodTotal + vehicleCost;
+    const totalFixedCosts = fixedCosts.reduce((sum, item) => sum + item.costo, 0);
+    return foodTotal + totalFixedCosts;
   };
 
   const handleExport = (filename: string) => {
-    onGenerateQuote(filename, selectedProducts, numberOfPeople, fixedCosts, selectedVehicle);
+    onGenerateQuote(filename, selectedProducts, numberOfPeople, fixedCosts);
   };
 
   const handleInternalExport = (filename: string) => {
-    onGenerateInternalQuote(filename, selectedProducts, numberOfPeople, fixedCosts, selectedVehicle);
+    onGenerateInternalQuote(filename, selectedProducts, numberOfPeople, fixedCosts);
   };
 
   return (
@@ -74,24 +75,20 @@ const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onGenerate
                 </div>
               </div>
 
-              {/* Vehicle Selection */}
+              {/* Fixed Costs Section */}
               <div className="border-t pt-3 space-y-2">
-                <h4 className="font-medium">Tipo di veicolo:</h4>
-                <div className="flex gap-2">
-                  <Button
-                    size="sm"
-                    variant={selectedVehicle === 'camioncino' ? 'default' : 'outline'}
-                    onClick={() => setSelectedVehicle('camioncino')}
-                  >
-                    Camioncino (€{fixedCosts.camioncino})
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant={selectedVehicle === 'furgone' ? 'default' : 'outline'}
-                    onClick={() => setSelectedVehicle('furgone')}
-                  >
-                    Furgone (€{fixedCosts.furgone})
-                  </Button>
+                <h4 className="font-medium">Costi Fissi:</h4>
+                <div className="space-y-1">
+                  {fixedCosts.map((item) => (
+                    <div key={item.id} className="flex justify-between text-sm text-gray-600">
+                      <span>{item.nome}:</span>
+                      <span>€{item.costo.toFixed(2)}</span>
+                    </div>
+                  ))}
+                  <div className="flex justify-between text-sm font-medium pt-1 border-t">
+                    <span>Totale costi fissi:</span>
+                    <span>€{fixedCosts.reduce((sum, item) => sum + item.costo, 0).toFixed(2)}</span>
+                  </div>
                 </div>
                 <Button
                   size="sm"
@@ -99,8 +96,8 @@ const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onGenerate
                   onClick={() => setIsFixedCostsDialogOpen(true)}
                   className="w-full"
                 >
-                  <Truck className="h-4 w-4 mr-2" />
-                  Modifica Costi Fissi
+                  <Settings className="h-4 w-4 mr-2" />
+                  Gestisci Costi Fissi
                 </Button>
               </div>
               
@@ -148,11 +145,13 @@ const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onGenerate
         onExport={handleInternalExport}
       />
 
-      <FixedCostsDialog
+      <DynamicFixedCostsDialog
         open={isFixedCostsDialogOpen}
         onOpenChange={setIsFixedCostsDialogOpen}
         fixedCosts={fixedCosts}
-        onUpdateFixedCosts={onUpdateFixedCosts}
+        onAddFixedCost={onAddFixedCost}
+        onUpdateFixedCost={onUpdateFixedCost}
+        onRemoveFixedCost={onRemoveFixedCost}
       />
     </Card>
   );

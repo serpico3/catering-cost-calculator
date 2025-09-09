@@ -76,6 +76,11 @@ const ProductList = ({
                 €{product.prezzo.toFixed(2)}
               </span>
               <div className="text-sm text-gray-500">per persona</div>
+              {product.costoProduzione !== undefined && (
+                <div className="text-xs text-gray-400">
+                  Costo prod: €{product.costoProduzione.toFixed(2)}
+                </div>
+              )}
             </div>
             <Button
               onClick={() => openEditDialog(product)}
