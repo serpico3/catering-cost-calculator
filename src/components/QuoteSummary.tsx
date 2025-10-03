@@ -7,25 +7,25 @@ import { Label } from '@/components/ui/label';
 import { FileDown, Settings, FileText } from 'lucide-react';
 import { SelectedProduct } from '@/hooks/useProducts';
 import { FixedCostItem } from '@/hooks/useDynamicFixedCosts';
-import ExportDialog from '@/components/ExportDialog';
 import DynamicFixedCostsDialog from '@/components/DynamicFixedCostsDialog';
+import { ClientDataDialog, ClientData } from '@/components/ClientDataDialog';
+import { usePdfGenerator } from '@/hooks/usePdfGenerator';
 
 interface QuoteSummaryProps {
   selectedProducts: SelectedProduct[];
   numberOfPeople: number;
   fixedCosts: FixedCostItem[];
-  onGenerateQuote: (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCostItem[]) => void;
-  onGenerateInternalQuote: (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCostItem[]) => void;
   onAddFixedCost: (nome: string, costo: number) => void;
   onUpdateFixedCost: (id: string, nome: string, costo: number) => void;
   onRemoveFixedCost: (id: string) => void;
 }
 
-const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onGenerateQuote, onGenerateInternalQuote, onAddFixedCost, onUpdateFixedCost, onRemoveFixedCost }: QuoteSummaryProps) => {
-  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false);
-  const [isInternalExportDialogOpen, setIsInternalExportDialogOpen] = useState(false);
+const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onAddFixedCost, onUpdateFixedCost, onRemoveFixedCost }: QuoteSummaryProps) => {
+  const { generateQuote, generateInternalQuote } = usePdfGenerator();
   const [isFixedCostsDialogOpen, setIsFixedCostsDialogOpen] = useState(false);
   const [includeFixedCostsInQuote, setIncludeFixedCostsInQuote] = useState(true);
+  const [showClientDialog, setShowClientDialog] = useState(false);
+  const [pendingQuoteType, setPendingQuoteType] = useState<'client' | 'internal' | null>(null);
 
   const calculateTotal = () => {
     const selectedTotal = selectedProducts
@@ -37,13 +37,27 @@ const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onGenerate
     return foodTotal + totalFixedCosts;
   };
 
-  const handleExport = (filename: string) => {
-    const costsToInclude = includeFixedCostsInQuote ? fixedCosts : [];
-    onGenerateQuote(filename, selectedProducts, numberOfPeople, costsToInclude);
+  const handleGenerateQuote = () => {
+    setPendingQuoteType('client');
+    setShowClientDialog(true);
   };
 
-  const handleInternalExport = (filename: string) => {
-    onGenerateInternalQuote(filename, selectedProducts, numberOfPeople, fixedCosts);
+  const handleGenerateInternalQuote = () => {
+    setPendingQuoteType('internal');
+    setShowClientDialog(true);
+  };
+
+  const handleClientDataSubmit = (clientData: ClientData) => {
+    const filename = new Date().toISOString().split('T')[0];
+    
+    if (pendingQuoteType === 'client') {
+      const costsToInclude = includeFixedCostsInQuote ? fixedCosts : [];
+      generateQuote(filename, selectedProducts, numberOfPeople, costsToInclude, includeFixedCostsInQuote, clientData);
+    } else if (pendingQuoteType === 'internal') {
+      generateInternalQuote(filename, selectedProducts, numberOfPeople, fixedCosts, clientData);
+    }
+    
+    setPendingQuoteType(null);
   };
 
   return (
@@ -130,7 +144,7 @@ const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onGenerate
 
         <div className="grid grid-cols-1 gap-3 mt-6">
           <Button
-            onClick={() => setIsExportDialogOpen(true)}
+            onClick={handleGenerateQuote}
             className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-lg py-3"
             disabled={!selectedProducts.some(p => p.selected)}
           >
@@ -139,7 +153,7 @@ const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onGenerate
           </Button>
           
           <Button
-            onClick={() => setIsInternalExportDialogOpen(true)}
+            onClick={handleGenerateInternalQuote}
             variant="outline"
             className="w-full border-blue-500 text-blue-600 hover:bg-blue-50 py-3"
             disabled={!selectedProducts.some(p => p.selected)}
@@ -150,16 +164,10 @@ const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onGenerate
         </div>
       </CardContent>
 
-      <ExportDialog
-        open={isExportDialogOpen}
-        onOpenChange={setIsExportDialogOpen}
-        onExport={handleExport}
-      />
-      
-      <ExportDialog
-        open={isInternalExportDialogOpen}
-        onOpenChange={setIsInternalExportDialogOpen}
-        onExport={handleInternalExport}
+      <ClientDataDialog
+        open={showClientDialog}
+        onOpenChange={setShowClientDialog}
+        onSubmit={handleClientDataSubmit}
       />
 
       <DynamicFixedCostsDialog

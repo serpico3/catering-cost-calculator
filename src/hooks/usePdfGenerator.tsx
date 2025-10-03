@@ -3,11 +3,19 @@ import jsPDF from 'jspdf';
 import { useToast } from '@/hooks/use-toast';
 import { SelectedProduct } from './useProducts';
 import { FixedCostItem } from './useDynamicFixedCosts';
+import { ClientData } from '@/components/ClientDataDialog';
 
 export const usePdfGenerator = () => {
   const { toast } = useToast();
 
-  const generateQuote = (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCostItem[]) => {
+  const generateQuote = (
+    filename: string, 
+    selectedProducts: SelectedProduct[], 
+    numberOfPeople: number, 
+    fixedCosts: FixedCostItem[], 
+    includeFixedCostsInQuote: boolean,
+    clientData: ClientData
+  ) => {
     const selectedItems = selectedProducts.filter(p => p.selected);
     
     if (selectedItems.length === 0) {
@@ -22,7 +30,7 @@ export const usePdfGenerator = () => {
     const currentDate = new Date().toLocaleDateString('it-IT');
     const subtotal = selectedItems.reduce((sum, product) => sum + product.prezzo, 0);
     const totalFood = subtotal * numberOfPeople;
-    const totalFixedCosts = fixedCosts.reduce((sum, item) => sum + item.costo, 0);
+    const totalFixedCosts = includeFixedCostsInQuote ? fixedCosts.reduce((sum, item) => sum + item.costo, 0) : 0;
     const grandTotal = totalFood + totalFixedCosts;
 
     // Create PDF with dynamic pagination
@@ -48,27 +56,29 @@ export const usePdfGenerator = () => {
       // Generate first page with header
       generateHeader();
       
-      // Add products with pagination
+      // Menu proposal section
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Proposta Menù Food Loop', 20, yPosition);
+      yPosition += 10;
+      
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`Costo: ${subtotal.toFixed(2)} €/persona IVA comp.`, 20, yPosition);
+      yPosition += 10;
+      
+      // Add products
+      doc.setFont('helvetica', 'normal');
       selectedItems.forEach((item, index) => {
         // Check if new page is needed
         if (yPosition > pageHeight - 40) {
           doc.addPage();
           currentPage++;
           yPosition = 30;
-          
-          // Add simplified header for subsequent pages
-          doc.setFontSize(12);
-          doc.setFont('helvetica', 'bold');
-          doc.text('PREVENTIVO CATERING - Continua', 20, 20);
-          doc.setLineWidth(0.3);
-          doc.line(20, 25, 190, 25);
-          yPosition = 40;
         }
         
-        doc.setFontSize(11);
-        doc.setFont('helvetica', 'normal');
-        doc.text(`${index + 1}. ${item.nome}`, 25, yPosition);
-        yPosition += lineHeight;
+        doc.text(`• ${item.nome}`, 25, yPosition);
+        yPosition += 6;
       });
       
       // Add final summary
@@ -89,87 +99,95 @@ export const usePdfGenerator = () => {
         doc.addImage(logoImg, 'PNG', 20, 15, 40, 20);
       }
       
-      // Header
-      doc.setFontSize(20);
+      // Title on the right
+      doc.setFontSize(16);
       doc.setFont('helvetica', 'bold');
-      doc.text('PREVENTIVO CATERING', 70, 30);
+      doc.text('LO STREET FOOD. CIRCOLARE!', 105, 25);
       
-      // Separator line
-      doc.setLineWidth(0.5);
-      doc.line(20, 40, 190, 40);
-      
-      // Cooperative "i Piosi" info - correct data
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Coop. Sociale I Piosi', 20, 55);
-      doc.text('Via 2 Giugno, 11 – 37066 Sommacampagna (Verona)', 20, 63);
-      doc.text('Tel: 045 515882 – Fax: 045 515480', 20, 71);
-      doc.text('E-mail: info@ipiosi.it', 20, 79);
-      
-      // Date and number of people
-      doc.text(`Data: ${currentDate}`, 130, 55);
-      doc.text(`Numero persone: ${numberOfPeople}`, 130, 63);
-      
-      // Selected products title
+      // Event title
       doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
-      doc.text('PRODOTTI SELEZIONATI:', 20, 100);
+      doc.text(clientData.titoloEvento.toUpperCase(), 20, 50);
+      
+      // Client references section
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Riferimenti Cliente:', 20, 62);
+      
+      doc.setFont('helvetica', 'normal');
+      let yPos = 70;
+      doc.text(clientData.nomeCliente, 20, yPos);
+      yPos += 6;
+      doc.text(clientData.referente, 20, yPos);
+      yPos += 6;
+      doc.text(`mail: ${clientData.email}`, 20, yPos);
+      if (clientData.telefono) {
+        yPos += 6;
+        doc.text(`tel: ${clientData.telefono}`, 20, yPos);
+      }
+      
+      yPosition = yPos + 15;
     };
 
     const addSummarySection = () => {
       // Check if there's space for summary
-      if (yPosition > pageHeight - 80) {
+      if (yPosition > pageHeight - 100) {
         doc.addPage();
         yPosition = 30;
       }
       
       yPosition += 10;
-      doc.setLineWidth(0.3);
-      doc.line(20, yPosition, 190, yPosition);
-      yPosition += 15;
-      
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'normal');
-      doc.text(`Subtotale per persona: €${subtotal.toFixed(2)}`, 20, yPosition);
-      yPosition += 8;
-      doc.text(`Numero persone: ${numberOfPeople}`, 20, yPosition);
-      yPosition += 8;
-      doc.text(`Subtotale cibo: €${totalFood.toFixed(2)}`, 20, yPosition);
-      yPosition += 8;
-      
-      // Fixed costs breakdown
-      doc.text('Costi fissi:', 20, yPosition);
-      yPosition += 6;
-      fixedCosts.forEach((cost) => {
-        doc.text(`  • ${cost.nome}: €${cost.costo.toFixed(2)}`, 25, yPosition);
-        yPosition += 6;
-      });
-      doc.text(`Totale costi fissi: €${totalFixedCosts.toFixed(2)}`, 20, yPosition);
-      yPosition += 15;
-      
-      doc.setFontSize(16);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`TOTALE COMPLESSIVO: €${grandTotal.toFixed(2)} (IVA ESCLUSA)`, 20, yPosition);
       
       // Additional notes
-      yPosition += 20;
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text('NOTE IMPORTANTI:', 20, yPosition);
-      yPosition += 8;
-      doc.text('• Il servizio verrà fornito con materiale usa e getta riciclabile', 20, yPosition);
-      yPosition += 6;
-      doc.text('• Per l\'utilizzo di stoviglie di diverso genere, contattare per', 20, yPosition);
-      yPosition += 6;
-      doc.text('  una modifica al preventivo', 20, yPosition);
+      if (clientData.noteAggiuntive) {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'italic');
+        const lines = doc.splitTextToSize(clientData.noteAggiuntive, 170);
+        doc.text(lines, 20, yPosition);
+        yPosition += (lines.length * 5) + 10;
+      }
       
-      // Footer
-      yPosition += 15;
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'italic');
-      doc.text('Grazie per averci scelto per il vostro evento!', 20, yPosition);
-      doc.text('Il preventivo è valido per 30 giorni dalla data di emissione.', 20, yPosition + 8);
-      doc.text('La cooperativa sociale "i Piosi" si impegna per la qualità e la solidarietà.', 20, yPosition + 16);
+      // Total persons info
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Previsionale per minimo di ${numberOfPeople} persone`, 20, yPosition);
+      yPosition += 10;
+      
+      // Service details
+      const serviceDetails = [
+        'Allestimento due/tre tavoli (Food Loop) con presenza di nostri operatori addetti alla somministrazione',
+        '',
+        'Sarà presente il food truck, pertanto sarà necessaria una presa di corrente 220V',
+        '',
+        'Pagamento tramite bonifico bancario previa FATTURA.',
+        '',
+        'Si prega dare conferma entro e non oltre 5gg dal preventivo.'
+      ];
+      
+      serviceDetails.forEach(detail => {
+        if (yPosition > pageHeight - 20) {
+          doc.addPage();
+          yPosition = 30;
+        }
+        if (detail) {
+          const lines = doc.splitTextToSize(detail, 170);
+          doc.text(lines, 20, yPosition);
+          yPosition += (lines.length * 5) + 2;
+        } else {
+          yPosition += 5;
+        }
+      });
+      
+      // Footer with company info
+      yPosition += 10;
+      doc.setFontSize(8);
+      doc.setFont('helvetica', 'normal');
+      const footerText = 'I PIOSI Società Cooperativa Sociale - 37066 SOMMACAMPAGNA (VR) - Via 2 Giugno, 11 - Telefono 045 515882 / Fax 045 515480 - e-mail: info@ipiosi.it';
+      const footerText2 = 'Codice Fiscale / Partita IVA 02198320232 – Iscrizione Tribunale VR n° 30159 - R.e.a. N° 222968 – Albo Società Cooperative A104500';
+      
+      doc.text(footerText, 105, yPosition, { align: 'center' });
+      yPosition += 4;
+      doc.text(footerText2, 105, yPosition, { align: 'center' });
     };
 
     // If logo doesn't load within 2 seconds, proceed anyway
@@ -180,7 +198,7 @@ export const usePdfGenerator = () => {
     }, 2000);
   };
 
-  const generateInternalQuote = (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCostItem[]) => {
+  const generateInternalQuote = (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCostItem[], clientData: ClientData) => {
     const selectedItems = selectedProducts.filter(p => p.selected);
     
     if (selectedItems.length === 0) {

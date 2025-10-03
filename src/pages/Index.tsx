@@ -2,7 +2,6 @@
 import React, { useState } from 'react';
 import { UtensilsCrossed } from 'lucide-react';
 import { useProducts } from '@/hooks/useProducts';
-import { usePdfGenerator } from '@/hooks/usePdfGenerator';
 import { useDynamicFixedCosts } from '@/hooks/useDynamicFixedCosts';
 import ProductList from '@/components/ProductList';
 import PeopleCounter from '@/components/PeopleCounter';
@@ -23,7 +22,6 @@ const Index = () => {
     importProducts
   } = useProducts();
 
-  const { generateQuote, generateInternalQuote } = usePdfGenerator();
   const { fixedCosts, addFixedCost, updateFixedCost, removeFixedCost } = useDynamicFixedCosts();
 
   const handlePeopleInputChange = (value: string) => {
@@ -81,8 +79,6 @@ const Index = () => {
               selectedProducts={selectedProducts}
               numberOfPeople={numberOfPeople}
               fixedCosts={fixedCosts}
-              onGenerateQuote={generateQuote}
-              onGenerateInternalQuote={generateInternalQuote}
               onAddFixedCost={addFixedCost}
               onUpdateFixedCost={updateFixedCost}
               onRemoveFixedCost={removeFixedCost}
