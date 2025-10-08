@@ -64,7 +64,7 @@ export const usePdfGenerator = () => {
       
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.text(`Costo: ${subtotal.toFixed(2)} €/persona IVA comp.`, 20, yPosition);
+      doc.text(`Costo: ${subtotal.toFixed(2)} €/persona IVA esclusa`, 20, yPosition);
       yPosition += 10;
       
       // Add products
