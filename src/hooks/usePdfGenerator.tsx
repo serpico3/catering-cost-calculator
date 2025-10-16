@@ -40,34 +40,35 @@ export const usePdfGenerator = () => {
     const startY = 115;
     let yPosition = startY;
     
+    // Convert image to base64 to avoid loading issues
     const logoImg = new Image();
-    logoImg.onload = function() {
-      generatePdfContent();
-    };
-    logoImg.onerror = function() {
-      generatePdfContent();
-    };
-    logoImg.src = '/lovable-uploads/1f82fa2a-8709-4f33-b544-f2e8f1eeec61.png';
-
-    const generatePdfContent = () => {
+    logoImg.crossOrigin = 'anonymous';
+    
+    const generatePdfContent = (logoLoaded: boolean = false) => {
       let currentPage = 1;
       yPosition = startY;
 
       // Generate first page with header
-      generateHeader();
+      generateHeader(logoLoaded);
       
-      // Menu proposal section
-      doc.setFontSize(13);
+      // Menu proposal section with better styling
+      doc.setFontSize(14);
       doc.setFont('helvetica', 'bold');
       doc.text('Proposta Menù Food Loop', 20, yPosition);
-      yPosition += 10;
+      yPosition += 12;
       
+      // Price box with border
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.5);
+      const priceText = `Costo: € ${subtotal.toFixed(2)} /persona IVA esclusa`;
+      doc.setFontSize(12);
+      const textWidth = doc.getTextWidth(priceText);
+      doc.rect(18, yPosition - 6, textWidth + 4, 10);
+      doc.text(priceText, 20, yPosition);
+      yPosition += 15;
+      
+      // Products list with better spacing
       doc.setFontSize(11);
-      doc.setFont('helvetica', 'bold');
-      doc.text(`Costo: ${subtotal.toFixed(2)} €/persona IVA esclusa`, 20, yPosition);
-      yPosition += 10;
-      
-      // Add products
       doc.setFont('helvetica', 'normal');
       selectedItems.forEach((item, index) => {
         // Check if new page is needed
@@ -78,10 +79,10 @@ export const usePdfGenerator = () => {
         }
         
         doc.text(`• ${item.nome}`, 25, yPosition);
-        yPosition += 6;
+        yPosition += 7;
       });
       
-      // Add final summary
+      // Add final summary - ensure it's always visible
       addSummarySection();
       
       // Save PDF
@@ -92,30 +93,48 @@ export const usePdfGenerator = () => {
         description: "Il file PDF è stato scaricato con successo",
       });
     };
+    
+    // Try to load logo with proper error handling
+    logoImg.onload = function() {
+      generatePdfContent(true);
+    };
+    logoImg.onerror = function() {
+      console.warn('Logo could not be loaded, generating PDF without logo');
+      generatePdfContent(false);
+    };
+    logoImg.src = '/lovable-uploads/1f82fa2a-8709-4f33-b544-f2e8f1eeec61.png';
 
-    const generateHeader = () => {
-      // Logo at top left (if available)
-      if (logoImg.complete) {
-        doc.addImage(logoImg, 'PNG', 20, 15, 40, 20);
+    const generateHeader = (logoLoaded: boolean = false) => {
+      // Logo at top left (only if loaded successfully)
+      if (logoLoaded && logoImg.complete && logoImg.naturalWidth > 0) {
+        try {
+          doc.addImage(logoImg, 'PNG', 20, 15, 40, 20);
+        } catch (e) {
+          console.warn('Error adding logo to PDF:', e);
+        }
       }
       
-      // Title on the right
-      doc.setFontSize(16);
+      // Title on the right with better styling
+      doc.setFontSize(18);
       doc.setFont('helvetica', 'bold');
       doc.text('LO STREET FOOD. CIRCOLARE!', 105, 25);
       
-      // Event title
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'bold');
-      doc.text(clientData.titoloEvento.toUpperCase(), 20, 50);
+      // Decorative line
+      doc.setLineWidth(0.5);
+      doc.line(20, 40, 190, 40);
       
-      // Client references section
+      // Event title with background
+      doc.setFontSize(15);
+      doc.setFont('helvetica', 'bold');
+      doc.text(clientData.titoloEvento.toUpperCase(), 20, 52);
+      
+      // Client references section with better layout
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.text('Riferimenti Cliente:', 20, 62);
+      doc.text('Riferimenti Cliente:', 20, 66);
       
       doc.setFont('helvetica', 'normal');
-      let yPos = 70;
+      let yPos = 74;
       doc.text(clientData.nomeCliente, 20, yPos);
       yPos += 6;
       doc.text(clientData.referente, 20, yPos);
@@ -126,34 +145,53 @@ export const usePdfGenerator = () => {
         doc.text(`tel: ${clientData.telefono}`, 20, yPos);
       }
       
-      yPosition = yPos + 15;
+      // Separator line
+      yPos += 10;
+      doc.setLineWidth(0.3);
+      doc.line(20, yPos, 190, yPos);
+      
+      yPosition = yPos + 10;
     };
 
     const addSummarySection = () => {
-      // Check if there's space for summary
-      if (yPosition > pageHeight - 100) {
+      // Ensure space for summary - always add new page if needed
+      const requiredSpace = 120;
+      if (yPosition > pageHeight - requiredSpace) {
         doc.addPage();
         yPosition = 30;
       }
       
-      yPosition += 10;
+      yPosition += 15;
       
-      // Additional notes
+      // Separator line
+      doc.setLineWidth(0.5);
+      doc.line(20, yPosition, 190, yPosition);
+      yPosition += 12;
+      
+      // Additional notes with better styling
       if (clientData.noteAggiuntive) {
+        doc.setFontSize(11);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Note:', 20, yPosition);
+        yPosition += 7;
+        
         doc.setFontSize(10);
         doc.setFont('helvetica', 'italic');
         const lines = doc.splitTextToSize(clientData.noteAggiuntive, 170);
         doc.text(lines, 20, yPosition);
-        yPosition += (lines.length * 5) + 10;
+        yPosition += (lines.length * 5) + 12;
       }
       
-      // Total persons info
-      doc.setFontSize(11);
-      doc.setFont('helvetica', 'normal');
+      // Total persons info - highlighted
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
       doc.text(`Previsionale per minimo di ${numberOfPeople} persone`, 20, yPosition);
-      yPosition += 10;
+      yPosition += 12;
       
-      // Service details
+      // Service details with better formatting
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      
       const serviceDetails = [
         'Allestimento due/tre tavoli (Food Loop) con presenza di nostri operatori addetti alla somministrazione',
         '',
@@ -165,22 +203,45 @@ export const usePdfGenerator = () => {
       ];
       
       serviceDetails.forEach(detail => {
-        if (yPosition > pageHeight - 20) {
+        // Always ensure space for content
+        if (yPosition > pageHeight - 25) {
           doc.addPage();
           yPosition = 30;
         }
         if (detail) {
           const lines = doc.splitTextToSize(detail, 170);
           doc.text(lines, 20, yPosition);
-          yPosition += (lines.length * 5) + 2;
+          yPosition += (lines.length * 5) + 3;
         } else {
-          yPosition += 5;
+          yPosition += 4;
         }
       });
       
-      // Footer with company info
+      // Total summary box - ensure it's always visible
+      if (yPosition > pageHeight - 40) {
+        doc.addPage();
+        yPosition = 30;
+      }
+      
       yPosition += 10;
-      doc.setFontSize(8);
+      doc.setLineWidth(0.8);
+      doc.setDrawColor(0, 0, 0);
+      doc.rect(15, yPosition - 5, 180, 18);
+      
+      doc.setFontSize(13);
+      doc.setFont('helvetica', 'bold');
+      doc.text(`TOTALE PREVENTIVO: € ${grandTotal.toFixed(2)} + IVA`, 20, yPosition + 5);
+      yPosition += 25;
+      
+      // Footer with company info - always at bottom or new page
+      if (yPosition > pageHeight - 20) {
+        doc.addPage();
+        yPosition = 250;
+      } else {
+        yPosition = 265;
+      }
+      
+      doc.setFontSize(7);
       doc.setFont('helvetica', 'normal');
       const footerText = 'I PIOSI Società Cooperativa Sociale - 37066 SOMMACAMPAGNA (VR) - Via 2 Giugno, 11 - Telefono 045 515882 / Fax 045 515480 - e-mail: info@ipiosi.it';
       const footerText2 = 'Codice Fiscale / Partita IVA 02198320232 – Iscrizione Tribunale VR n° 30159 - R.e.a. N° 222968 – Albo Società Cooperative A104500';
@@ -190,12 +251,13 @@ export const usePdfGenerator = () => {
       doc.text(footerText2, 105, yPosition, { align: 'center' });
     };
 
-    // If logo doesn't load within 2 seconds, proceed anyway
+    // If logo doesn't load within 3 seconds, proceed without it
     setTimeout(() => {
-      if (!logoImg.complete) {
-        generatePdfContent();
+      if (!logoImg.complete || logoImg.naturalWidth === 0) {
+        console.warn('Logo loading timeout, generating PDF without logo');
+        generatePdfContent(false);
       }
-    }, 2000);
+    }, 3000);
   };
 
   const generateInternalQuote = (filename: string, selectedProducts: SelectedProduct[], numberOfPeople: number, fixedCosts: FixedCostItem[], clientData: ClientData) => {
