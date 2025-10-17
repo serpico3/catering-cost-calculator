@@ -105,7 +105,7 @@ export const usePdfGenerator = () => {
     logoImg.src = '/lovable-uploads/1f82fa2a-8709-4f33-b544-f2e8f1eeec61.png';
 
     const generateHeader = (logoLoaded: boolean = false) => {
-      // Logo at top left (only if loaded successfully)
+      // Logo at top left (only if loaded successfully) - ALWAYS DRAWN FIRST
       if (logoLoaded && logoImg.complete && logoImg.naturalWidth > 0) {
         try {
           doc.addImage(logoImg, 'PNG', 20, 15, 40, 20);
@@ -123,30 +123,44 @@ export const usePdfGenerator = () => {
       doc.setLineWidth(0.5);
       doc.line(20, 40, 190, 40);
       
-      // Event title with background
+      // Event title with text wrapping for long titles
       doc.setFontSize(15);
       doc.setFont('helvetica', 'bold');
-      doc.text(clientData.titoloEvento.toUpperCase(), 20, 52);
+      const eventTitleLines = doc.splitTextToSize(clientData.titoloEvento.toUpperCase(), 170);
+      doc.text(eventTitleLines, 20, 52);
       
-      // Client references section with better layout
+      // Client references section with better layout and text wrapping
+      let yPos = 52 + (eventTitleLines.length * 7) + 8;
       doc.setFontSize(11);
       doc.setFont('helvetica', 'bold');
-      doc.text('Riferimenti Cliente:', 20, 66);
+      doc.text('Riferimenti Cliente:', 20, yPos);
+      yPos += 8;
       
       doc.setFont('helvetica', 'normal');
-      let yPos = 74;
-      doc.text(clientData.nomeCliente, 20, yPos);
-      yPos += 6;
-      doc.text(clientData.referente, 20, yPos);
-      yPos += 6;
-      doc.text(`mail: ${clientData.email}`, 20, yPos);
+      doc.setFontSize(10);
+      
+      // Wrap long client name
+      const clientNameLines = doc.splitTextToSize(clientData.nomeCliente, 170);
+      doc.text(clientNameLines, 20, yPos);
+      yPos += clientNameLines.length * 5 + 2;
+      
+      // Wrap long referente
+      const referenteLines = doc.splitTextToSize(clientData.referente, 170);
+      doc.text(referenteLines, 20, yPos);
+      yPos += referenteLines.length * 5 + 2;
+      
+      // Wrap long email
+      const emailLines = doc.splitTextToSize(`mail: ${clientData.email}`, 170);
+      doc.text(emailLines, 20, yPos);
+      yPos += emailLines.length * 5 + 2;
+      
       if (clientData.telefono) {
-        yPos += 6;
         doc.text(`tel: ${clientData.telefono}`, 20, yPos);
+        yPos += 6;
       }
       
       // Separator line
-      yPos += 10;
+      yPos += 5;
       doc.setLineWidth(0.3);
       doc.line(20, yPos, 190, yPos);
       
