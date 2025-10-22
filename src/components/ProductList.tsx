@@ -4,12 +4,13 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Trash2, FileText, X, Edit, UtensilsCrossed } from 'lucide-react';
+import { Plus, Trash2, FileText, X, Edit, UtensilsCrossed, Download } from 'lucide-react';
 import { Product, SelectedProduct } from '@/hooks/useProducts';
 import AddProductDialog from '@/components/AddProductDialog';
 import RemoveProductDialog from '@/components/RemoveProductDialog';
 import CsvImportExportDialog from '@/components/CsvImportExportDialog';
 import EditProductDialog from '@/components/EditProductDialog';
+import { usePdfGenerator } from '@/hooks/usePdfGenerator';
 
 interface ProductListProps {
   selectedProducts: SelectedProduct[];
@@ -37,6 +38,7 @@ const ProductList = ({
   const [isCsvDialogOpen, setIsCsvDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const { generateMenuPdf } = usePdfGenerator();
 
   const openEditDialog = (product: Product) => {
     setEditingProduct(product);
@@ -148,10 +150,18 @@ const ProductList = ({
           <Button
             onClick={() => setIsCsvDialogOpen(true)}
             variant="outline"
-            className="col-span-2 border-blue-500 text-blue-600 hover:bg-blue-50"
+            className="border-blue-500 text-blue-600 hover:bg-blue-50"
           >
             <FileText className="h-4 w-4 mr-2" />
             Gestione CSV
+          </Button>
+          <Button
+            onClick={() => generateMenuPdf(selectedProducts)}
+            variant="outline"
+            className="border-purple-500 text-purple-600 hover:bg-purple-50"
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Scarica Menù Cliente
           </Button>
         </div>
       </CardContent>

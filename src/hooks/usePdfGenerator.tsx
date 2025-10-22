@@ -32,6 +32,7 @@ export const usePdfGenerator = () => {
     const totalFood = subtotal * numberOfPeople;
     const totalFixedCosts = includeFixedCostsInQuote ? fixedCosts.reduce((sum, item) => sum + item.costo, 0) : 0;
     const grandTotal = totalFood + totalFixedCosts;
+    const filteredFixedCosts = includeFixedCostsInQuote ? fixedCosts : [];
 
     // Create PDF with dynamic pagination
     const doc = new jsPDF();
@@ -119,6 +120,11 @@ export const usePdfGenerator = () => {
       doc.setFont('helvetica', 'bold');
       doc.text('LO STREET FOOD. CIRCOLARE!', 105, 25);
       
+      // Date on the right
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Data: ${currentDate}`, 190, 32, { align: 'right' });
+      
       // Decorative line
       doc.setLineWidth(0.5);
       doc.line(20, 40, 190, 40);
@@ -181,6 +187,26 @@ export const usePdfGenerator = () => {
       doc.setLineWidth(0.5);
       doc.line(20, yPosition, 190, yPosition);
       yPosition += 12;
+      
+      // Fixed costs details if included
+      if (filteredFixedCosts.length > 0) {
+        doc.setFontSize(12);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Costi Fissi:', 20, yPosition);
+        yPosition += 8;
+        
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        filteredFixedCosts.forEach((cost) => {
+          if (yPosition > pageHeight - 25) {
+            doc.addPage();
+            yPosition = 30;
+          }
+          doc.text(`• ${cost.nome}: € ${cost.costo.toFixed(2)}`, 25, yPosition);
+          yPosition += 6;
+        });
+        yPosition += 8;
+      }
       
       // Additional notes with better styling
       if (clientData.noteAggiuntive) {
@@ -455,5 +481,140 @@ export const usePdfGenerator = () => {
     }, 2000);
   };
 
-  return { generateQuote, generateInternalQuote };
+  const generateMenuPdf = (products: SelectedProduct[]) => {
+    if (products.length === 0) {
+      toast({
+        title: "Nessun prodotto disponibile",
+        description: "Non ci sono prodotti da esportare nel menù",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    const currentDate = new Date().toLocaleDateString('it-IT');
+    const doc = new jsPDF();
+    const pageHeight = 280;
+    let yPosition = 115;
+    
+    const logoImg = new Image();
+    logoImg.crossOrigin = 'anonymous';
+    
+    const generateMenuContent = (logoLoaded: boolean = false) => {
+      // Header with logo
+      if (logoLoaded && logoImg.complete && logoImg.naturalWidth > 0) {
+        try {
+          doc.addImage(logoImg, 'PNG', 20, 15, 40, 20);
+        } catch (e) {
+          console.warn('Error adding logo to PDF:', e);
+        }
+      }
+      
+      // Title
+      doc.setFontSize(20);
+      doc.setFont('helvetica', 'bold');
+      doc.text('MENÙ FOOD LOOP', 105, 25, { align: 'center' });
+      
+      // Date
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`Data: ${currentDate}`, 190, 32, { align: 'right' });
+      
+      // Decorative line
+      doc.setLineWidth(0.5);
+      doc.line(20, 40, 190, 40);
+      
+      // Subtitle
+      doc.setFontSize(14);
+      doc.setFont('helvetica', 'bold');
+      doc.text('LO STREET FOOD. CIRCOLARE!', 20, 55);
+      
+      yPosition = 70;
+      doc.setLineWidth(0.3);
+      doc.line(20, yPosition, 190, yPosition);
+      yPosition += 15;
+      
+      // Products list
+      doc.setFontSize(12);
+      doc.setFont('helvetica', 'bold');
+      doc.text('Lista Prodotti:', 20, yPosition);
+      yPosition += 10;
+      
+      doc.setFontSize(11);
+      doc.setFont('helvetica', 'normal');
+      
+      products.forEach((product, index) => {
+        // Check if new page is needed
+        if (yPosition > pageHeight - 30) {
+          doc.addPage();
+          yPosition = 30;
+        }
+        
+        // Product name
+        doc.setFont('helvetica', 'bold');
+        doc.text(`${index + 1}. ${product.nome}`, 25, yPosition);
+        yPosition += 6;
+        
+        // Product price
+        doc.setFont('helvetica', 'normal');
+        doc.text(`Prezzo: € ${product.prezzo.toFixed(2)} /persona`, 30, yPosition);
+        yPosition += 10;
+      });
+      
+      // Footer info
+      if (yPosition > pageHeight - 40) {
+        doc.addPage();
+        yPosition = 30;
+      }
+      
+      yPosition += 15;
+      doc.setLineWidth(0.3);
+      doc.line(20, yPosition, 190, yPosition);
+      yPosition += 10;
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'italic');
+      doc.text('Tutti i prezzi sono IVA esclusa', 20, yPosition);
+      yPosition += 6;
+      doc.text('Per informazioni e prenotazioni: info@ipiosi.it - Tel. 045 515882', 20, yPosition);
+      
+      // Footer at bottom
+      yPosition = 265;
+      doc.setFontSize(7);
+      doc.setFont('helvetica', 'normal');
+      const footerText = 'I PIOSI Società Cooperativa Sociale - 37066 SOMMACAMPAGNA (VR) - Via 2 Giugno, 11 - Telefono 045 515882 / Fax 045 515480 - e-mail: info@ipiosi.it';
+      const footerText2 = 'Codice Fiscale / Partita IVA 02198320232 – Iscrizione Tribunale VR n° 30159 - R.e.a. N° 222968 – Albo Società Cooperative A104500';
+      
+      doc.text(footerText, 105, yPosition, { align: 'center' });
+      yPosition += 4;
+      doc.text(footerText2, 105, yPosition, { align: 'center' });
+      
+      // Save PDF
+      doc.save(`menu-food-loop-${currentDate.replace(/\//g, '-')}.pdf`);
+
+      toast({
+        title: "Menù scaricato",
+        description: "Il menù cliente è stato scaricato con successo",
+      });
+    };
+    
+    // Try to load logo
+    logoImg.onload = function() {
+      generateMenuContent(true);
+    };
+    logoImg.onerror = function() {
+      console.warn('Logo could not be loaded, generating menu PDF without logo');
+      generateMenuContent(false);
+    };
+    logoImg.src = '/lovable-uploads/1f82fa2a-8709-4f33-b544-f2e8f1eeec61.png';
+    
+    // Timeout fallback
+    setTimeout(() => {
+      if (!logoImg.complete || logoImg.naturalWidth === 0) {
+        console.warn('Logo loading timeout, generating menu PDF without logo');
+        generateMenuContent(false);
+      }
+    }, 3000);
+  };
+
+  return { generateQuote, generateInternalQuote, generateMenuPdf };
 };
