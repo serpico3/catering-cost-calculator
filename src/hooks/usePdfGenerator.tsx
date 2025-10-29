@@ -283,7 +283,7 @@ export const usePdfGenerator = () => {
       
       doc.setFontSize(13);
       doc.setFont('helvetica', 'bold');
-      doc.text(`TOTALE PREVENTIVO: € ${grandTotal.toFixed(2)} + IVA`, 20, yPosition + 5);
+      doc.text(`TOTALE PREVENTIVO: € ${grandTotal.toFixed(2)} IVA esclusa`, 20, yPosition + 5);
       yPosition += 25;
       
       // Footer with company info - always at bottom or new page
