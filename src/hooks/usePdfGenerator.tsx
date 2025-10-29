@@ -165,6 +165,19 @@ export const usePdfGenerator = () => {
         yPos += 6;
       }
       
+      // Add event date
+      if (clientData.dataEvento) {
+        doc.text(`Data evento: ${clientData.dataEvento}`, 20, yPos);
+        yPos += 6;
+      }
+      
+      // Add location
+      if (clientData.luogo) {
+        const luogoLines = doc.splitTextToSize(`Luogo: ${clientData.luogo}`, 170);
+        doc.text(luogoLines, 20, yPos);
+        yPos += luogoLines.length * 5 + 2;
+      }
+      
       // Separator line
       yPos += 5;
       doc.setLineWidth(0.3);
