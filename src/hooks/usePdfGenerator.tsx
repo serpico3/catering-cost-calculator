@@ -14,7 +14,8 @@ export const usePdfGenerator = () => {
     numberOfPeople: number, 
     fixedCosts: FixedCostItem[], 
     includeFixedCostsInQuote: boolean,
-    clientData: ClientData
+    clientData: ClientData,
+    includeServiceDetails: boolean = true
   ) => {
     const selectedItems = selectedProducts.filter(p => p.selected);
     
@@ -238,37 +239,39 @@ export const usePdfGenerator = () => {
       // Total persons info - highlighted
       doc.setFontSize(12);
       doc.setFont('helvetica', 'bold');
-      doc.text(`Previsionale per minimo di ${numberOfPeople} persone`, 20, yPosition);
+      doc.text(`Preventivo per: ${numberOfPeople} persone`, 20, yPosition);
       yPosition += 12;
       
-      // Service details with better formatting
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      
-      const serviceDetails = [
-        'Allestimento due/tre tavoli (Food Loop) con presenza di nostri operatori addetti alla somministrazione',
-        '',
-        'Sarà presente il food truck, pertanto sarà necessaria una presa di corrente 220V',
-        '',
-        'Pagamento tramite bonifico bancario previa FATTURA.',
-        '',
-        'Si prega dare conferma entro e non oltre 5gg dal preventivo.'
-      ];
-      
-      serviceDetails.forEach(detail => {
-        // Always ensure space for content
-        if (yPosition > pageHeight - 25) {
-          doc.addPage();
-          yPosition = 30;
-        }
-        if (detail) {
-          const lines = doc.splitTextToSize(detail, 170);
-          doc.text(lines, 20, yPosition);
-          yPosition += (lines.length * 5) + 3;
-        } else {
-          yPosition += 4;
-        }
-      });
+      // Service details with better formatting - only if included
+      if (includeServiceDetails) {
+        doc.setFontSize(10);
+        doc.setFont('helvetica', 'normal');
+        
+        const serviceDetails = [
+          'Allestimento due/tre tavoli (Food Loop) con presenza di nostri operatori addetti alla somministrazione',
+          '',
+          'Sarà presente il food truck, pertanto sarà necessaria una presa di corrente 220V',
+          '',
+          'Pagamento tramite bonifico bancario previa FATTURA.',
+          '',
+          'Si prega dare conferma entro e non oltre 5gg dal preventivo.'
+        ];
+        
+        serviceDetails.forEach(detail => {
+          // Always ensure space for content
+          if (yPosition > pageHeight - 25) {
+            doc.addPage();
+            yPosition = 30;
+          }
+          if (detail) {
+            const lines = doc.splitTextToSize(detail, 170);
+            doc.text(lines, 20, yPosition);
+            yPosition += (lines.length * 5) + 3;
+          } else {
+            yPosition += 4;
+          }
+        });
+      }
       
       // Total summary box - ensure it's always visible
       if (yPosition > pageHeight - 40) {

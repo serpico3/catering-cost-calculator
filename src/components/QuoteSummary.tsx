@@ -24,6 +24,7 @@ const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onAddFixed
   const { generateQuote, generateInternalQuote } = usePdfGenerator();
   const [isFixedCostsDialogOpen, setIsFixedCostsDialogOpen] = useState(false);
   const [includeFixedCostsInQuote, setIncludeFixedCostsInQuote] = useState(true);
+  const [includeServiceDetails, setIncludeServiceDetails] = useState(true);
   const [showClientDialog, setShowClientDialog] = useState(false);
   const [pendingQuoteType, setPendingQuoteType] = useState<'client' | 'internal' | null>(null);
 
@@ -52,7 +53,7 @@ const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onAddFixed
     
     if (pendingQuoteType === 'client') {
       const costsToInclude = includeFixedCostsInQuote ? fixedCosts : [];
-      generateQuote(filename, selectedProducts, numberOfPeople, costsToInclude, includeFixedCostsInQuote, clientData);
+      generateQuote(filename, selectedProducts, numberOfPeople, costsToInclude, includeFixedCostsInQuote, clientData, includeServiceDetails);
     } else if (pendingQuoteType === 'internal') {
       generateInternalQuote(filename, selectedProducts, numberOfPeople, fixedCosts, clientData);
     }
@@ -138,6 +139,17 @@ const QuoteSummary = ({ selectedProducts, numberOfPeople, fixedCosts, onAddFixed
             />
             <Label htmlFor="include-fixed-costs" className="text-sm font-medium">
               Includi costi fissi nel preventivo cliente
+            </Label>
+          </div>
+          
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="include-service-details"
+              checked={includeServiceDetails}
+              onCheckedChange={(checked) => setIncludeServiceDetails(checked as boolean)}
+            />
+            <Label htmlFor="include-service-details" className="text-sm font-medium">
+              Includi dettagli del servizio (allestimento, food truck, pagamento)
             </Label>
           </div>
         </div>
